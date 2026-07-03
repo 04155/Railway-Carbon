@@ -39,7 +39,7 @@
             padding: 25px;
             box-sizing: border-box;
             border-right: 1px solid #e5e7eb;
-            overflow-y: auto;
+            overflow-y: visible;
             display: flex;
             flex-direction: column;
         }
@@ -60,7 +60,7 @@
         /* 響應式表格包裹層 */
         .table-responsive {
             width: 100%;
-            overflow-x: auto;
+            overflow-x: visible;
             margin-bottom: 15px;
         }
 
@@ -272,14 +272,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }).addTo(mapInstance);
 
     // 預設建立三筆測試行程
-    addNewRow("桃園", "八斗子", 1);
-    addNewRow("臺北", "高雄", 2);
-    addNewRow("臺中", "花蓮", 1);
-    
+    addNewRow("臺北", "高雄", 1);
+
     setTimeout(calculateAllRoutes, 300);
 });
 
-function addNewRow(startDef = "桃園", endDef = "八斗子", passDef = 1) {
+function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
     rowCounter++;
     const rowId = `row_${rowCounter}`;
     const tbody = document.getElementById("excelBody");
