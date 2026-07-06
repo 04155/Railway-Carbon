@@ -1,5 +1,4 @@
-
-// 在 <script> 內新增或確認此函式存在
+console.log("JS 載入成功");
 function importCSV(input) {
     const file = input.files[0];
     if (!file) return;
@@ -470,4 +469,3 @@ function getStationLatLng(stationName) {
     }
     return [25.047, 121.517];
 }
-
