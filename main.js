@@ -505,7 +505,34 @@ function calculateAllRoutes() {
 } // 這是 calculateAllRoutes 的結束大括號
 
 function getStationLatLng(stationName) {
-    if (STATION_GEO[stationName]) return STATION_GEO[stationName];
+    if (!stationName) return null;
+
+    // 1. 標準化處理：去除空白，並將俗體「台」一律轉為繁體「臺」
+    let name = stationName.toString().trim().replace(/台/g, '臺');
+    
+    // 2. 如果名稱結尾有「站」或「車站」（例如 台北站、基隆車站），通通砍掉只留純地名
+    if (name.endsWith("車站")) {
+        name = name.slice(0, -2);
+    } else if (name.endsWith("站")) {
+        name = name.slice(0, -1);
+    }
+
+    // 💡 3. 精準對接：直接從您的 STATION_GEO 字典檔中抓取座標
+    if (typeof STATION_GEO !== 'undefined' && STATION_GEO[name]) {
+        return STATION_GEO[name];
+    }
+
+    // 💡 4. 模糊比對：如果精準名稱找不到，用關鍵字去搜尋 STATION_GEO 的 key
+    if (typeof STATION_GEO !== 'undefined') {
+        const keys = Object.keys(STATION_GEO);
+        const matchKey = keys.find(k => k.includes(name) || name.includes(k));
+        if (matchKey) {
+            return STATION_GEO[matchKey];
+        }
+    }
+
+    // 如果真的都找不到，才拋出警告
+    console.warn(`[座標缺失] 無法在 STATION_GEO 中匹配到車站: ${stationName} (處理後關鍵字: ${name})`);
     return null;
 }
 // =================================================================
