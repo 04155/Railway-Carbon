@@ -507,33 +507,39 @@ function calculateAllRoutes() {
 function getStationLatLng(stationName) {
     if (!stationName) return null;
 
-    // 1. 標準化處理：去除空白，並將俗體「台」一律轉為繁體「臺」
+    // 1. 標準化處理：去除空白、俗體轉繁體
     let name = stationName.toString().trim().replace(/台/g, '臺');
-    
-    // 2. 如果名稱結尾有「站」或「車站」（例如 台北站、基隆車站），通通砍掉只留純地名
-    if (name.endsWith("車站")) {
-        name = name.slice(0, -2);
-    } else if (name.endsWith("站")) {
-        name = name.slice(0, -1);
-    }
+    if (name.endsWith("車站")) name = name.slice(0, -2);
+    else if (name.endsWith("站")) name = name.slice(0, -1);
 
-    // 💡 3. 精準對接：直接從您的 STATION_GEO 字典檔中抓取座標
-    if (typeof STATION_GEO !== 'undefined' && STATION_GEO[name]) {
-        return STATION_GEO[name];
-    }
-
-    // 💡 4. 模糊比對：如果精準名稱找不到，用關鍵字去搜尋 STATION_GEO 的 key
+    // 2. 精準與模糊比對 (如果你原本的 STATION_GEO 裡有這站，直接回傳)
     if (typeof STATION_GEO !== 'undefined') {
+        if (STATION_GEO[name]) return STATION_GEO[name];
         const keys = Object.keys(STATION_GEO);
         const matchKey = keys.find(k => k.includes(name) || name.includes(k));
-        if (matchKey) {
-            return STATION_GEO[matchKey];
+        if (matchKey) return STATION_GEO[matchKey];
+    }
+
+    // 💡 3. 終極兜底防禦：如果 STATION_GEO 缺這站的座標，自動從鐵路網路中「借用」前後鄰近站的座標！
+    if (typeof RAILWAY_GRAPH !== 'undefined' && RAILWAY_GRAPH[stationName]) {
+        // 抓出這一站所有在鐵路網路上相鄰的鄰居車站
+        const neighbors = Object.keys(RAILWAY_GRAPH[stationName]);
+        
+        for (let neighbor of neighbors) {
+            let nName = neighbor.toString().trim().replace(/台/g, '臺');
+            if (nName.endsWith("車站")) nName = nName.slice(0, -2);
+            else if (nName.endsWith("站")) nName = nName.slice(0, -1);
+
+            // 如果鄰居有座標，立刻借過來用！
+            if (STATION_GEO[nName]) {
+                console.log(`[座標補償] 車站「${stationName}」缺少座標，已自動借用鄰近站「${neighbor}」的座標。`);
+                return STATION_GEO[nName];
+            }
         }
     }
 
-    // 如果真的都找不到，才拋出警告
-    console.warn(`[座標缺失] 無法在 STATION_GEO 中匹配到車站: ${stationName} (處理後關鍵字: ${name})`);
-    return null;
+    // 如果連鄰居都找不到（極罕見），回傳台灣中心點座標，避免程式死掉
+    return [23.8, 121.0]; 
 }
 // =================================================================
 // 📤 匯出計算結果為全新的 Excel 檔案
