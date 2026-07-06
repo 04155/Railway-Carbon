@@ -441,7 +441,7 @@ function calculateAllRoutes() {
                 }else {
                     console.warn(`車站 ${node} 缺少座標，已忽略其地圖標記。`);
                 }
-            );
+            } );
 
             const polylineBack = L.polyline(currentRouteLatLngs, { 
                 color: colorHex, 
