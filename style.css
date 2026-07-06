@@ -94,20 +94,9 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 /* 💡 補充：請檢查你「彈出的車站清單」那個元素的 class */
 /* 假設它叫 .select-options 或 .dropdown-menu，請務必加上 position 與極高的 z-index */
 /* ========================================== */
-.custom-select-container .select-options, 
-.custom-select-container .dropdown-list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #3b82f6;
-    border-radius: 4px;
-    /* 💡 給它 2000 的高層級，確保展開的清單絕對不會被地圖上的任何圖標、線條擋住 */
-    z-index: 2000; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    max-height: 200px;
-    overflow-y: auto;
+.dropdown-box { 
+    display: none; position: absolute; top: 100%; left: 0; z-index: 1000; 
+    width: 200px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
 }
 
 .custom-select-container.open .dropdown-box { display: block; }
