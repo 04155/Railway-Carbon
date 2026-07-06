@@ -78,8 +78,21 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .select-trigger:hover { border-color: #3b82f6; }
 
 .dropdown-box { 
-    display: none; position: absolute; top: 100%; left: 0; z-index: 1000; 
-    width: 200px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    right: 0; 
+    background: white; 
+    border: 1px solid #d1d5db; 
+    border-radius: 0 0 6px 6px; 
+    
+    /* 關鍵修正：將 z-index 提高到 2000 以上，確保壓過地圖與周邊容器 */
+    z-index: 2500; 
+    
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* 加深陰影，讓最上層的視覺更明顯 */
+    display: none; 
+    padding: 8px; 
+    box-sizing: border-box;
 }
 .custom-select-container.open .dropdown-box { display: block; }
 
