@@ -1,4 +1,6 @@
 console.log("JS 載入成功");
+
+document.addEventListener('DOMContentLoaded', () => {
 function importCSV(input) {
     const file = input.files[0];
     if (!file) return;
@@ -469,3 +471,4 @@ function getStationLatLng(stationName) {
     }
     return [25.047, 121.517];
 }
+});
