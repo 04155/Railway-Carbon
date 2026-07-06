@@ -94,3 +94,6 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .summary-box { margin-top: 20px; padding: 15px; background: #f8fafc; border-left: 4px solid #3b82f6; }
 .info-box { margin-top: 20px; padding: 15px; background: #eff6ff; border-radius: 8px; }
 .active-row { background-color: #fef3c7 !important; }
+
+.btn-calc { background: #3b82f6; color: white; margin-left: 10px; }
+.btn-calc:hover { background: #2563eb; }
