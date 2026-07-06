@@ -81,32 +81,128 @@ document.addEventListener('DOMContentLoaded', () => {
 function importCSV(input) {
     const file = input.files[0];
     if (!file) return;
+
+    const fileName = file.name.toLowerCase();
     const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const rows = text.split('\n');
-        
-        rows.forEach(row => {
-            if(!row.trim()) return;
-            const cols = row.split(','); 
-            if (cols.length >= 2) {
-                const start = cols[0].trim();
-                const end = cols[1].trim();
-                const pass = cols[2] ? parseInt(cols[2].trim()) || 1 : 1;
-                if (stations.includes(start) && stations.includes(end)) {
-                    addNewRow(start, end, pass);
-                }
+
+    // 1. 處理 Excel 檔案 (.xlsx / .xls)
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // 取得第一個工作表（Sheet）
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // 轉換為二維陣列 [[起點, 終點, 人數], ...]
+                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                processImportedRows(rows);
+            } catch (err) {
+                console.error(err);
+                alert('讀取 Excel 檔案失敗，請檢查檔案格式是否正確。');
             }
-        });
+        };
+        reader.readAsArrayBuffer(file);
+
+    // 2. 處理 CSV 檔案
+    } else if (fileName.endsWith('.csv')) {
+        reader.onload = function(e) {
+            try {
+                const buffer = e.target.result;
+                
+                // 💡 自動解決亂碼精髓：先用 UTF-8 解碼試試看
+                let decoder = new TextDecoder('utf-8');
+                let text = decoder.decode(buffer);
+                
+                // 如果內容包含 Excel 經典亂碼特徵 ，或者想更保險地與台灣 Windows Excel (BIG5) 相容
+                if (text.includes('')) {
+                    decoder = new TextDecoder('big5');
+                    text = decoder.decode(buffer);
+                }
+
+                // 將 CSV 文字切成二維陣列
+                const rows = text.split(/\r?\n/)
+                                 .filter(row => row.trim() !== '')
+                                 .map(row => row.split(','));
+                                 
+                processImportedRows(rows);
+            } catch (err) {
+                console.error(err);
+                alert('讀取 CSV 檔案失敗。');
+            }
+        };
+        reader.readAsArrayBuffer(file);
         
-        setTimeout(() => {
+    } else {
+        alert('不支援的檔案格式！請上傳 .csv 或 .xlsx 檔案。');
+    }
+
+    // 💡 關鍵：清空 input 的值，這樣使用者連續匯入同一個檔案時才會重複觸發 onchange
+    input.value = '';
+}
+
+// 3. 統一解析陣列並渲染到畫面的後續流程
+function processImportedRows(rows) {
+    let successCount = 0;
+
+    rows.forEach(row => {
+        // 確保這列至少有起點跟終點（前兩欄）
+        if (row.length >= 2) {
+            const startStation = row[0]?.toString().trim();
+            const endStation = row[1]?.toString().trim();
+            
+            // 讀取人數，如果沒填、填錯或不是數字，就自動預設為 1 人
+            let count = row[2]?.toString().trim();
+            if (!count || isNaN(count)) {
+                count = 1;
+            } else {
+                count = parseInt(count, 10);
+            }
+
+            // 只要起點和終點都有字，就直接塞進您的 addNewRow
+            if (startStation && endStation) {
+                // 💡 完美對接您的 addNewRow 函式
+                addNewRow(startStation, endStation, count); 
+                successCount++;
+            }
+        }
+    });
+
+    if (successCount > 0) {
+        alert(`成功匯入 ${successCount} 筆行程！`);
+        
+        // 💡 匯入完成後，自動幫您觸發「重新計算」，地圖跟碳排就會立刻更新！
+        if (typeof calculateAllRoutes === 'function') {
             calculateAllRoutes();
-            console.log("CSV 匯入完畢，已重新計算路徑");
-        }, 100); 
-    };
-    reader.readAsText(file, 'UTF-8');
-    input.value = "";
+        }
+    } else {
+        alert('沒有找到有效的行程資料！請確保 Excel 的 A欄為起點、B欄為終點、C欄為人數喔。');
+    }
+}
+
+// --- 統一處理資料並渲染到畫面的函式 ---
+function processImportedData(rows) {
+    // 這裡跑您原本的迴圈，把資料塞進網頁表格中
+    // 假設 rows 的結構是 [ ["臺北", "高雄", 2], ["臺北", "二水", 1] ]
+    rows.forEach(row => {
+        if (row.length >= 3) {
+            const startStation = row[0]?.toString().trim();
+            const endStation = row[1]?.toString().trim();
+            const count = row[2]?.toString().trim();
+            
+            if (startStation && endStation) {
+                // 💡 呼叫您原本「新增一筆行程」的 UI 建立函式
+                // 例如：addNewRowWithData(startStation, endStation, count);
+                console.log(`成功匯入：${startStation} 到 ${endStation}，共 ${count} 人`);
+            }
+        }
+    });
+    
+    // 匯入完成後，自動觸發一次「重新計算」
+    // calculateAllRoutes(); 
 }
 
 function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
