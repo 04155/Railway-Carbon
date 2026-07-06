@@ -77,29 +77,37 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     position: relative; 
     cursor: pointer; 
     user-select: none; 
-    /* 💡 平時給一個基準圖層 */
     z-index: 10; 
 }
 
-/* 💡 重點：當滑鼠懸停或是選單被激活(Active)時，把圖層飆高到 1010，直接壓過地圖 */
-.custom-select-container:hover,
-.custom-select-container:focus-within {
+/* 當選單被點開時，外層容器圖層飆高，壓過地圖 */
+.custom-select-container.active-dropdown {
     z-index: 1010;
 }
 
 .select-trigger { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; min-width: 100px; }
 .select-trigger:hover { border-color: #3b82f6; }
 
-/* ========================================== */
-/* 💡 補充：請檢查你「彈出的車站清單」那個元素的 class */
-/* 假設它叫 .select-options 或 .dropdown-menu，請務必加上 position 與極高的 z-index */
-/* ========================================== */
-.dropdown-box { 
-    display: none; position: absolute; top: 100%; left: 0; z-index: 1000; 
-    width: 200px; background: white; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+/* 💡 下拉選項清單（預設隱藏） */
+.custom-select-container .select-options {
+    display: none;       /* 💡 預設完全隱藏 */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #3b82f6;
+    border-radius: 4px;
+    z-index: 2000;       /* 💡 超高圖層，絕不被地圖遮擋 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
 }
 
-.custom-select-container.open .dropdown-box { display: block; }
+/* 💡 當外層加上 .active-dropdown 類別時，才顯示清單 */
+.custom-select-container.active-dropdown .select-options {
+    display: block;
+}
 
 .filter-input { width: 100%; padding: 8px; border: none; border-bottom: 1px solid #eee; outline: none; }
 .station-list { list-style: none; max-height: 200px; overflow-y: auto; }
