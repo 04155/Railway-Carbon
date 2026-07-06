@@ -31,53 +31,7 @@ const STATION_DB = {
     "liujia": { "竹中": 0.0, "六家": 3.1 },
     "shenao": { "瑞芳": 0.0, "海科館": 4.3, "八斗子": 4.7 }
 };
-const RAILWAY_GRAPH = {};
 
-function initRailwayGraph() {
-    for (let lineName in STATION_DB) {
-        const line = STATION_DB[lineName];
-        // 取得該線路所有車站名稱的陣列 (例如: ["基隆", "三坑", "八堵", ...])
-        const stations = Object.keys(line); 
-        
-        for (let i = 0; i < stations.length; i++) {
-            const currentStation = stations[i];
-            const currentDist = line[currentStation];
-            
-            // 初始化圖形中的節點
-            if (!RAILWAY_GRAPH[currentStation]) {
-                RAILWAY_GRAPH[currentStation] = {};
-            }
-            
-            // 如果有「下一站」，計算兩者差值並建立雙向連結
-            if (i < stations.length - 1) {
-                const nextStation = stations[i + 1];
-                const nextDist = line[nextStation];
-                // 計算相鄰兩站的實際距離（取絕對值防止負數）
-                const distance = Math.abs(nextDist - currentDist); 
-                
-                // 建立目前站往下一站的連線
-                RAILWAY_GRAPH[currentStation][nextStation] = distance;
-                
-                // 建立下一站往目前站的連線（確保可以雙向行駛）
-                if (!RAILWAY_GRAPH[nextStation]) {
-                    RAILWAY_GRAPH[nextStation] = {};
-                }
-                RAILWAY_GRAPH[nextStation][currentStation] = distance;
-            }
-        }
-    }
-    
-    // 💡 關鍵手動轉乘點補強：因為您的資料中，不同線路的轉乘大站里程是分開算的（例如：竹南在 main 是 125.3，在 coast 是 0.0）
-    // 我們需要手動幫這些「交會轉乘站」建立物理連結（距離為 0，代表同一個車站可以自由換線）
-    const transferStations = ["八堵", "七堵", "竹南", "彰化", "二水", "中洲", "新竹", "瑞芳", "成功"];
-    // 註：因為上面物件 key 相同時會自動融合成同一個節點，
-    // 且各支線/海線的起點站名（如 "竹南"、"二水"）與主線完全相同，
-    // 轉換迴圈會自動把主線的「前/後站」與支線的「下一站」通通連到同一個車站節點上！
-    // 也就是說：二水節點會同時連向「田中(主)」、「林內(主)」以及「源泉(集集線)」，演算法會完美自動轉乘！
-}
-
-// 執行初始化
-initRailwayGraph();
 const STATION_GEO = {
     "基隆": [25.132, 121.740], "三坑": [25.123, 121.741], "八堵": [25.108, 121.727], "七堵": [25.097, 121.714], "百福": [25.077, 121.694], "五堵": [25.065, 121.668],
     "汐止": [25.064, 121.652], "汐科": [25.061, 121.637], "南港": [25.052, 121.607], "松山": [25.049, 121.578], "臺北": [25.047, 121.517],
