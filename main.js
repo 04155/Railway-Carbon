@@ -443,7 +443,73 @@ function getStationLatLng(stationName) {
     if (STATION_GEO[stationName]) return STATION_GEO[stationName];
     return null;
 }
+// =================================================================
+// 📤 匯出計算結果為全新的 Excel 檔案
+// =================================================================
+function exportToExcel() {
+    // 1. 抓取畫面上所有的資料列
+    const rows = document.querySelectorAll("#excelBody tr");
+    if (rows.length === 0) {
+        alert("目前表格中沒有任何行程資料可以匯出喔！");
+        return;
+    }
 
+    // 2. 定義 Excel 的標題列
+    const excelData = [
+        ["起點站", "終點站", "人數", "預估里程 (km)", "碳排放量 (kg)", "完整經過路線節點"]
+    ];
+
+    // 3. 依序將每一列的數據（包含我們算出來的轉乘路徑）塞進陣列
+    rows.forEach(row => {
+        const rowId = row.id;
+        const startStation = document.getElementById(`${rowId}_startTrigger`)?.innerText || "";
+        const endStation = document.getElementById(`${rowId}_endTrigger`)?.innerText || "";
+        const passengers = document.getElementById(`${rowId}_passengers`)?.value || "1";
+        const distance = document.getElementById(`${rowId}_distanceText`)?.innerText || "-";
+        const carbon = document.getElementById(`${rowId}_carbonText`)?.innerText || "-";
+        
+        // 從我們之前全域儲存的 rowDataStore 中抓取完整的轉乘車站節點資訊
+        const fullPath = (typeof rowDataStore !== 'undefined' && rowDataStore[rowId]) 
+            ? rowDataStore[rowId].path 
+            : "";
+
+        excelData.push([
+            startStation,
+            endStation,
+            parseInt(passengers, 10),
+            distance !== "-" ? parseFloat(distance) : "-",
+            carbon !== "-" ? parseFloat(carbon) : "-",
+            fullPath
+        ]);
+    });
+
+    // 4. 如果有總計區塊，順便把總預算里程與總碳排加在最後面當作總結
+    const summaryBox = document.getElementById("summaryResult");
+    if (summaryBox && summaryBox.style.display !== "none") {
+        const totalCount = document.getElementById("totalCount")?.innerText || "0";
+        const totalDistance = document.getElementById("totalDistance")?.innerText || "0";
+        const totalCarbon = document.getElementById("totalCarbon")?.innerText || "0";
+        
+        excelData.push([]); // 空一行隔開
+        excelData.push(["總計行程筆數", `${totalCount} 筆`, "", "", "", ""]);
+        excelData.push(["總預計里程", `${totalDistance} km`, "", "", "", ""]);
+        excelData.push(["總碳排放量", `${totalCarbon} kg CO2e`, "", "", "", ""]);
+    }
+
+    // 5. 透過 SheetJS 套件建立 Workbook 並下載檔案
+    try {
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "台鐵碳排規劃結果");
+        
+        // 自動動態生成檔名（加上當前時間戳防重複）
+        const dateStr = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `台鐵碳排批次規劃表_${dateStr}.xlsx`);
+    } catch (error) {
+        console.error("匯出 Excel 發生錯誤:", error);
+        alert("匯出失敗，請確保網頁已正確載入 Excel 處理套件。");
+    }
+}
 // =================================================================
 // 🚀 替換後的全新 calculateAllRoutes (支援轉乘、包含地圖防錯與軌跡連線)
 // =================================================================
