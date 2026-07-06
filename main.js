@@ -148,11 +148,21 @@ function importCSV(input) {
 function processImportedRows(rows) {
     let successCount = 0;
 
-    rows.forEach(row => {
+    rows.forEach((row, rowIndex) => {
         // 確保這列至少有起點跟終點（前兩欄）
         if (row.length >= 2) {
             const startStation = row[0]?.toString().trim();
             const endStation = row[1]?.toString().trim();
+            
+            // 💡 智慧防禦機制：如果是第一行 (rowIndex === 0)，
+            // 或者內容剛好包含「起點」、「終點」、「車站」、「station」等字眼，就自動跳過不匯入
+            if (rowIndex === 0 || 
+                startStation.includes("起點") || 
+                startStation.toLowerCase().includes("start") || 
+                startStation.includes("車站")) {
+                console.log("已自動過濾標題列：", row);
+                return; // 跳過這一列，繼續處理下一列
+            }
             
             // 讀取人數，如果沒填、填錯或不是數字，就自動預設為 1 人
             let count = row[2]?.toString().trim();
@@ -164,7 +174,6 @@ function processImportedRows(rows) {
 
             // 只要起點和終點都有字，就直接塞進您的 addNewRow
             if (startStation && endStation) {
-                // 💡 完美對接您的 addNewRow 函式
                 addNewRow(startStation, endStation, count); 
                 successCount++;
             }
@@ -174,7 +183,7 @@ function processImportedRows(rows) {
     if (successCount > 0) {
         alert(`成功匯入 ${successCount} 筆行程！`);
         
-        // 💡 匯入完成後，自動幫您觸發「重新計算」，地圖跟碳排就會立刻更新！
+        // 匯入完成後，自動幫您觸發「重新計算」，地圖跟碳排就會立刻更新！
         if (typeof calculateAllRoutes === 'function') {
             calculateAllRoutes();
         }
