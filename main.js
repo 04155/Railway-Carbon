@@ -457,7 +457,9 @@ function calculateAllRoutes() {
         }
     });
 
-    // 更新總計看板
+    // =================================================================
+    // 💡 替換 calculateAllRoutes 最底部的更新總計看板與智慧縮放區塊
+    // =================================================================
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
         summaryBox.style.display = "block";
@@ -465,23 +467,42 @@ function calculateAllRoutes() {
         document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
         document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
         
-        // 💡 智慧縮放：讓地圖自動等比例縮放至完美看見所有路線的邊界
+        // 💡 全新改版：超穩固地圖等比例縮放機制
         if (allRouteLatLngs.length > 0 && mapInstance) {
-            const bounds = L.featureGroup(
-                allRouteLatLngs.map(latlng => L.marker(latlng))
-            ).getBounds();
+            console.log(`[地圖縮放偵錯] 成功收集到 ${allRouteLatLngs.length} 個車站座標點。`, allRouteLatLngs);
             
-            mapInstance.fitBounds(bounds, {
-                padding: [50, 50],  // 畫面邊緣留白 50px，確保標記不破格
-                maxZoom: 12,        // 避免只有一筆超近行程時被放到太大
-                animate: true,      // 開啟平滑動畫
-                duration: 0.8       // 動畫持續 0.8 秒
-            });
+            try {
+                // 1. 建立一個空的 Leaflet 邊界物件
+                const bounds = L.latLngBounds();
+                
+                // 2. 把所有路線經過的座標通通延伸進這個邊界裡
+                allRouteLatLngs.forEach(latlng => {
+                    if (latlng && (Array.isArray(latlng) || (latlng.lat && latlng.lng))) {
+                        bounds.extend(latlng);
+                    }
+                });
+                
+                // 3. 確保邊界有效，再讓地圖飛過去
+                if (bounds.isValid()) {
+                    setTimeout(() => {
+                        mapInstance.fitBounds(bounds, {
+                            padding: [50, 50],   // 畫面上、下、左、右各留白 50 像素
+                            maxZoom: 12,         // 限制最大放大層級，防止單站時被放到變馬賽克
+                            animate: true,       // 開啟平滑動畫
+                            duration: 0.6        // 動畫時間 0.6 秒
+                        });
+                    }, 100); // 稍微延遲 100ms 確保 DOM 與線條皆已渲染完成
+                } else {
+                    console.warn("[地圖縮放] 算出的邊界無效(bounds.isValid() 為 false)");
+                }
+            } catch (err) {
+                console.error("[地圖縮放] fitBounds 執行過程發生錯誤:", err);
+            }
         }
     } else {
         summaryBox.style.display = "none";
     }
-}
+} // 這是 calculateAllRoutes 的結束大括號
 
 function getStationLatLng(stationName) {
     if (STATION_GEO[stationName]) return STATION_GEO[stationName];
