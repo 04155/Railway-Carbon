@@ -299,6 +299,8 @@ function calculateAllRoutes() {
                     mapLayers[rowId].push(marker);
                 }
             });
+            console.log("正在繪製 rowId:", rowId, "座標陣列內容:", currentRouteLatLngs);
+            const polylineBack = L.polyline(currentRouteLatLngs, { ... });
             const polylineBack = L.polyline(currentRouteLatLngs, { color: colorHex, weight: 5, opacity: 0.7, customType: 'back' }).addTo(mapInstance);
             const polylineFront = L.polyline(currentRouteLatLngs, { color: '#ffffff', weight: 2, dashArray: '5, 8', opacity: 0.9, customType: 'front' }).addTo(mapInstance);
             mapLayers[rowId].push(polylineBack, polylineFront);
