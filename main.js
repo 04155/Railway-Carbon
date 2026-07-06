@@ -518,7 +518,8 @@ function getStationLatLng(stationName) {
         if (matchKey) return STATION_GEO[matchKey];
     }
 
-    return null; // 找不到就大方回傳 null，讓後面去過濾
+    // 💡 就是少了這一行！找不到時明確告訴程式它是 null
+    return null; 
 }
 // =================================================================
 // 📤 匯出計算結果為全新的 Excel 檔案
