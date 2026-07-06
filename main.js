@@ -282,7 +282,9 @@ function calculateAllRoutes() {
             
             routeResult.nodes.forEach((node, nIdx) => {
                 const pos = getStationLatLng(node);
-                currentRouteLatLngs.push(pos);
+                if (pos) {
+                    currentRouteLatLngs.push(pos);
+                }
                 if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
                     const isStart = (nIdx === 0);
                     const marker = L.circleMarker(pos, { radius: isStart ? 6 : 5, fillColor: isStart ? '#ffffff' : colorHex, color: colorHex, weight: 2, fillOpacity: 1.0 }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
