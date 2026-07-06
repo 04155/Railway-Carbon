@@ -300,7 +300,12 @@ function calculateAllRoutes() {
                 }
             });
             console.log("正在繪製 rowId:", rowId, "座標陣列內容:", currentRouteLatLngs);
-            const polylineBack = L.polyline(currentRouteLatLngs, { ... });
+            const polylineBack = L.polyline(currentRouteLatLngs, { 
+                 color: '#3388ff',  // 路線顏色
+                 weight: 5,         // 線條寬度
+                 opacity: 0.7,      // 透明度
+                  lineJoin: 'round'  // 線條轉角樣式
+            }).addTo(mapInstance);
             const polylineBack = L.polyline(currentRouteLatLngs, { color: colorHex, weight: 5, opacity: 0.7, customType: 'back' }).addTo(mapInstance);
             const polylineFront = L.polyline(currentRouteLatLngs, { color: '#ffffff', weight: 2, dashArray: '5, 8', opacity: 0.9, customType: 'front' }).addTo(mapInstance);
             mapLayers[rowId].push(polylineBack, polylineFront);
