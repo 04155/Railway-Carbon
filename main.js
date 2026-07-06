@@ -1,4 +1,4 @@
-<script>
+
 // 在 <script> 內新增或確認此函式存在
 function importCSV(input) {
     const file = input.files[0];
@@ -471,5 +471,3 @@ function getStationLatLng(stationName) {
     return [25.047, 121.517];
 }
 
-
-</script>
