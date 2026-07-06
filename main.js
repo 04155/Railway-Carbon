@@ -58,270 +58,112 @@ const STATION_GEO = {
     "暖暖": [25.102, 121.740], "四腳亭": [25.103, 121.761], "猴硐": [25.087, 121.827], "冬山": [24.636, 121.792],
     "東澳": [24.519, 121.828], "南澳": [24.464, 121.799], "和平": [24.303, 121.753], "崇德": [24.162, 121.659]
 };
+function buildGraph() {
+    const graph = {};
+    Object.keys(STATION_DB).forEach(line => {
+        const stations = Object.keys(STATION_DB[line]);
+        for (let i = 0; i < stations.length - 1; i++) {
+            const u = stations[i];
+            const v = stations[i + 1];
+            const dist = Math.abs(STATION_DB[line][u] - STATION_DB[line][v]);
+            
+            if (!graph[u]) graph[u] = {};
+            if (!graph[v]) graph[v] = {};
+            
+            // 存入雙向距離
+            graph[u][v] = Math.min(graph[u][v] || Infinity, dist);
+            graph[v][u] = Math.min(graph[v][u] || Infinity, dist);
+        }
+    });
+    return graph;
+}
 
-const stations = Array.from(new Set(Object.keys(STATION_DB).flatMap(line => Object.keys(STATION_DB[line])))).sort();
-const ROUTE_COLORS = ["#2563eb", "#ea580c", "#16a34a", "#9333ea", "#db2777", "#0d9488", "#eab308", "#4b5563"];
+function getSmartRoute(start, end) {
+    if (start === end) return { dist: 0, path: start, nodes: [start] };
+    
+    const graph = buildGraph();
+    const distances = {};
+    const previous = {};
+    const nodes = new Set(Object.keys(graph));
 
-let mapInstance = null;
-let mapLayers = {}; 
-let rowCounter = 0;
-let rowDataStore = {};
+    // 初始化
+    Object.keys(graph).forEach(node => distances[node] = Infinity);
+    distances[start] = 0;
 
-// main.js - Part 2: Map Initialization and Row Management
+    while (nodes.size > 0) {
+        // 找出距離最小的點
+        let u = null;
+        for (let node of nodes) {
+            if (u === null || distances[node] < distances[u]) u = node;
+        }
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("JS 載入成功");
-    mapInstance = L.map('map').setView([23.8, 121.0], 7.5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(mapInstance);
+        if (distances[u] === Infinity || u === end) break;
+        nodes.delete(u);
 
-    addNewRow("臺北", "高雄", 2);
-    setTimeout(calculateAllRoutes, 300);
-});
-
-function importCSV(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const rows = text.split('\n');
-        rows.forEach(row => {
-            const cols = row.split(','); 
-            if (cols.length >= 2) {
-                const start = cols[0].trim();
-                const end = cols[1].trim();
-                if (stations.includes(start) && stations.includes(end)) {
-                    addNewRow(start, end, 1);
-                }
+        // 更新鄰居
+        for (let v in graph[u]) {
+            let alt = distances[u] + graph[u][v];
+            if (alt < distances[v]) {
+                distances[v] = alt;
+                previous[v] = u;
             }
-        });
-        setTimeout(calculateAllRoutes, 500);
+        }
+    }
+
+    // 重建路徑
+    const pathNodes = [];
+    let curr = end;
+    while (curr) {
+        pathNodes.unshift(curr);
+        curr = previous[curr];
+    }
+
+    return { 
+        dist: distances[end] || 0, 
+        path: pathNodes.join(" → "), 
+        nodes: pathNodes 
     };
-    reader.readAsText(file, 'UTF-8');
-    input.value = "";
 }
 
-function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
-    rowCounter++;
-    const rowId = `row_${rowCounter}`;
-    const tbody = document.getElementById("excelBody");
-    const colorHex = ROUTE_COLORS[(rowCounter - 1) % ROUTE_COLORS.length];
-    const tr = document.createElement("tr");
-    tr.id = rowId;
-    tr.onclick = () => highlightRow(rowId);
-    
-    tr.innerHTML = `
-        <td style="text-align: center;">
-            <span class="color-badge" style="background-color: ${colorHex};"></span>
-        </td>
-        <td>
-            <div class="custom-select-container" id="${rowId}_startCombo">
-                <div class="select-trigger" id="${rowId}_startTrigger">${startDef}</div>
-                <div class="dropdown-box">
-                    <input type="text" class="filter-input" placeholder="篩選..." autocomplete="off">
-                    <ul class="station-list"></ul>
-                </div>
-            </div>
-        </td>
-        <td>
-            <div class="custom-select-container" id="${rowId}_endCombo">
-                <div class="select-trigger" id="${rowId}_endTrigger">${endDef}</div>
-                <div class="dropdown-box">
-                    <input type="text" class="filter-input" placeholder="篩選..." autocomplete="off">
-                    <ul class="station-list"></ul>
-                </div>
-            </div>
-        </td>
-        <td>
-            <input type="number" class="num-input" id="${rowId}_passengers" value="${passDef}" min="1" onchange="resetRowResults('${rowId}')">
-        </td>
-        <td><span id="${rowId}_distanceText">-</span></td>
-        <td><span id="${rowId}_carbonText">-</span></td>
-        <td><button class="btn-action btn-del" onclick="deleteRow(event, '${rowId}')">刪除</button></td>
-    `;
-    
-    tbody.appendChild(tr);
-    initTableRowSelect(`${rowId}_startCombo`, `${rowId}_startTrigger`, () => resetRowResults(rowId));
-    initTableRowSelect(`${rowId}_endCombo`, `${rowId}_endTrigger`, () => resetRowResults(rowId));
-}
-
-function deleteRow(e, rowId) {
-    e.stopPropagation();
-    const row = document.getElementById(rowId);
-    if (row) {
-        row.remove();
-        delete rowDataStore[rowId];
-        if (mapLayers[rowId]) {
-            mapLayers[rowId].forEach(layer => mapInstance.removeLayer(layer));
-            delete mapLayers[rowId];
-        }
-        calculateAllRoutes(); 
-    }
-}
-
-function resetRowResults(rowId) {
-    document.getElementById(`${rowId}_distanceText`).innerText = "-";
-    document.getElementById(`${rowId}_carbonText`).innerText = "-";
-}
-
-// main.js - Part 3: Map Interaction, Routing Logic, and Select Controls
-
-function highlightRow(rowId) {
-    document.querySelectorAll("#excelBody tr").forEach(tr => tr.classList.remove("active-row"));
-    const targetRow = document.getElementById(rowId);
-    if (targetRow) targetRow.classList.add("active-row");
-
-    const data = rowDataStore[rowId];
-    if (data && data.nodes && data.nodes.length > 0) {
-        document.getElementById("pathInfoBox").style.display = "block";
-        document.getElementById("activePathText").innerText = data.path;
-    } else {
-        document.getElementById("pathInfoBox").style.display = "none";
-    }
-
-    Object.keys(mapLayers).forEach(key => {
-        const isCurrent = (key === rowId);
-        mapLayers[key].forEach(layer => {
-            if (layer instanceof L.Polyline) {
-                if (layer.options.customType === 'back') {
-                    layer.setStyle({ weight: isCurrent ? 9 : 5, opacity: isCurrent ? 1.0 : 0.4 });
-                } else {
-                    layer.setStyle({ weight: isCurrent ? 4 : 2, opacity: isCurrent ? 1.0 : 0.2 });
-                }
-                if (isCurrent) layer.bringToFront(); 
-            }
-            if (layer instanceof L.CircleMarker) {
-                layer.setStyle({ opacity: isCurrent ? 1.0 : 0.3, fillOpacity: isCurrent ? 0.9 : 0.2 });
-                if (isCurrent) layer.bringToFront();
-            }
-        });
-    });
-}
-
-function initTableRowSelect(comboId, triggerId, onChangeCallback) {
-    const container = document.getElementById(comboId);
-    const trigger = document.getElementById(triggerId);
-    const dropdown = container.querySelector(".dropdown-box");
-    const filterInput = dropdown.querySelector(".filter-input");
-    const list = dropdown.querySelector(".station-list");
-
-    trigger.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isOpen = container.classList.contains("open");
-        closeAllCombos();
-        if (!isOpen) {
-            container.classList.add("open");
-            renderList("");
-            filterInput.value = "";
-            setTimeout(() => filterInput.focus(), 50);
-        }
-    });
-
-    function renderList(filterText = "") {
-        list.innerHTML = "";
-        const filtered = stations.filter(s => s.includes(filterText));
-        filtered.forEach(station => {
-            const li = document.createElement("li");
-            li.className = "station-item" + (trigger.innerText === station ? " selected" : "");
-            li.innerText = station;
-            li.onclick = (ev) => {
-                ev.stopPropagation();
-                trigger.innerText = station;
-                container.classList.remove("open");
-                onChangeCallback();
-            };
-            list.appendChild(li);
-        });
-    }
-    filterInput.oninput = function() { renderList(this.value.trim()); };
-    dropdown.onclick = (ev) => ev.stopPropagation();
-}
-
-function closeAllCombos() {
-    document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
-}
-document.addEventListener("click", closeAllCombos);
-
+// 計算所有行並更新地圖與表格
 function calculateAllRoutes() {
-    Object.keys(mapLayers).forEach(key => { mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); });
+    // 1. 清除舊地圖圖層
+    Object.keys(mapLayers).forEach(key => { 
+        mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); 
+    });
     mapLayers = {};
+
     const rows = document.querySelectorAll("#excelBody tr");
-    let totalDist = 0, totalCarbon = 0, validCount = 0, allGlobalLatLngs = [], index = 0;
+    let totalDist = 0, totalCarbon = 0, validCount = 0, allGlobalLatLngs = [];
 
     rows.forEach(row => {
         const rowId = row.id;
-        const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
-        const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
-        const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
-        const colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length];
-        index++;
+        const start = document.getElementById(`${rowId}_startTrigger`).innerText;
+        const end = document.getElementById(`${rowId}_endTrigger`).innerText;
+        const pass = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
         
-        if (startName === endName) return; 
+        const route = getSmartRoute(start, end);
         
-        const routeResult = getSmartRoute(startName, endName);
-        if (routeResult.dist > 0) {
-            const CARBON_FACTOR = 0.048;
-            const trainCarbon = routeResult.dist * CARBON_FACTOR * passengers;
-            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.dist.toFixed(1);
-            document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
-            rowDataStore[rowId] = { dist: routeResult.dist, carbon: trainCarbon, path: routeResult.path, nodes: routeResult.nodes };
-            totalDist += routeResult.dist; totalCarbon += trainCarbon; validCount++;
+        if (route.nodes.length > 1) {
+            const carbon = route.dist * 0.048 * pass;
+            document.getElementById(`${rowId}_distanceText`).innerText = route.dist.toFixed(1);
+            document.getElementById(`${rowId}_carbonText`).innerText = carbon.toFixed(3);
+            
+            // 繪製地圖
             mapLayers[rowId] = [];
-            const currentRouteLatLngs = [];
-            routeResult.nodes.forEach((node, nIdx) => {
-                const pos = getStationLatLng(node);
-                currentRouteLatLngs.push(pos);
-                allGlobalLatLngs.push(pos);
-                if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
-                    const isStart = (nIdx === 0);
-                    const marker = L.circleMarker(pos, { radius: isStart ? 6 : 5, fillColor: isStart ? '#ffffff' : colorHex, color: colorHex, weight: 2, fillOpacity: 1.0 }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
-                    mapLayers[rowId].push(marker);
-                }
-            });
-            const polylineBack = L.polyline(currentRouteLatLngs, { color: colorHex, weight: 5, opacity: 0.7, customType: 'back' }).addTo(mapInstance);
-            const polylineFront = L.polyline(currentRouteLatLngs, { color: '#ffffff', weight: 2, dashArray: '5, 8', opacity: 0.9, customType: 'front' }).addTo(mapInstance);
-            mapLayers[rowId].push(polylineBack, polylineFront);
+            const latLngs = route.nodes.map(n => STATION_GEO[n]);
+            allGlobalLatLngs.push(...latLngs);
+            
+            const polyline = L.polyline(latLngs, { color: '#2563eb', weight: 4 }).addTo(mapInstance);
+            mapLayers[rowId].push(polyline);
+            
+            totalDist += route.dist;
+            totalCarbon += carbon;
+            validCount++;
         }
     });
-    document.getElementById("totalCount").innerText = validCount;
+
+    // 更新統計數據
     document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
     document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
-    document.getElementById("summaryResult").style.display = "block";
-    if (allGlobalLatLngs.length > 0) { mapInstance.fitBounds(L.latLngBounds(allGlobalLatLngs), { padding: [30, 30] }); }
-    if (rows.length > 0) { highlightRow(rows[0].id); }
-}
-
-function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
-function getDirectDist(line, s1, s2) { return Math.abs(STATION_DB[line][s1] - STATION_DB[line][s2]); }
-function getBranchPivot(station) {
-    const lines = getStationLines(station);
-    if (lines.length === 1) {
-        const ln = lines[0];
-        if (ln === "pingxi") return "三貂嶺"; if (ln === "jiji") return "二水"; if (ln === "shalun") return "中洲"; if (ln === "shenao") return "瑞芳"; if (ln === "liujia" || ln === "neiwan") return "竹中";
-    }
-    return null;
-}
-function getRouteNodesList(line, s1, s2) {
-    const lineStations = STATION_DB[line];
-    const s1Dist = lineStations[s1], s2Dist = lineStations[s2];
-    const minDist = Math.min(s1Dist, s2Dist), maxDist = Math.max(s1Dist, s2Dist);
-    let inRange = Object.keys(lineStations).filter(s => lineStations[s] >= minDist && lineStations[s] <= maxDist);
-    inRange.sort((a, b) => lineStations[a] - lineStations[b]);
-    if (s1Dist > s2Dist) inRange.reverse();
-    return inRange;
-}
-function getSmartRoute(start, end) {
-    if (start === end) return { dist: 0, path: start, nodes: [start] };
-    const sLines = getStationLines(start), eLines = getStationLines(end);
-    for (let sL of sLines) {
-        if (eLines.includes(sL)) { return { dist: getDirectDist(sL, start, end), path: `${start} → ${end}`, nodes: getRouteNodesList(sL, start, end) }; }
-    }
-    // (路線計算其餘邏輯已包含在內) ...
-    return { dist: 0, path: "未配置路線", nodes: [start, end] };
-}
-function getStationLatLng(stationName) {
-    if (STATION_GEO[stationName]) return STATION_GEO[stationName];
-    return [25.047, 121.517];
 }
