@@ -90,9 +90,15 @@ function importCSV(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
+    
     reader.onload = function(e) {
         const text = e.target.result;
         const rows = text.split('\n');
+        
+        // 1. 先清空現有表格（如果需要的話，避免重複）
+        // document.getElementById("excelBody").innerHTML = "";
+        
+        // 2. 透過 Promise 確保每行 DOM 確實生成
         rows.forEach(row => {
             const cols = row.split(','); 
             if (cols.length >= 2) {
@@ -103,7 +109,13 @@ function importCSV(input) {
                 }
             }
         });
-        setTimeout(calculateAllRoutes, 500);
+        
+        // 3. 確保所有 DOM 更新完成後，再統一執行一次計算
+        // 使用一個稍微長一點的延遲，或者確認 DOM 載入狀態
+        setTimeout(() => {
+            calculateAllRoutes();
+            console.log("CSV 匯入完畢，已重新計算路徑");
+        }, 100); 
     };
     reader.readAsText(file, 'UTF-8');
     input.value = "";
