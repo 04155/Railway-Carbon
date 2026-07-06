@@ -300,7 +300,7 @@ function calculateAllRoutes() {
                 }
             });
             console.log("正在繪製 rowId:", rowId, "座標陣列內容:", currentRouteLatLngs);
-            const polylineBack = L.polyline(currentRouteLatLngs, { 
+            let polylineBack = L.polyline(currentRouteLatLngs, { 
                  color: '#3388ff',  // 路線顏色
                  weight: 5,         // 線條寬度
                  opacity: 0.7,      // 透明度
