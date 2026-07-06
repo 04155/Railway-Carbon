@@ -300,31 +300,30 @@ function calculateAllRoutes() {
                 }
             });
             console.log("正在繪製 rowId:", rowId, "座標陣列內容:", currentRouteLatLngs);
-            let polylineBack = L.polyline(currentRouteLatLngs, { 
-                 color: '#3388ff',  // 路線顏色
-                 weight: 5,         // 線條寬度
-                 opacity: 0.7,      // 透明度
-                  lineJoin: 'round'  // 線條轉角樣式
+
+            // 1. 統一宣告這兩個變數，不再重複使用 const
+            const polylineBack = L.polyline(currentRouteLatLngs, { 
+                color: colorHex, 
+                weight: 5, 
+                opacity: 0.7, 
+                customType: 'back' 
             }).addTo(mapInstance);
-            const polylineBack = L.polyline(currentRouteLatLngs, { color: colorHex, weight: 5, opacity: 0.7, customType: 'back' }).addTo(mapInstance);
-            const polylineFront = L.polyline(currentRouteLatLngs, { color: '#ffffff', weight: 2, dashArray: '5, 8', opacity: 0.9, customType: 'front' }).addTo(mapInstance);
+
+            const polylineFront = L.polyline(currentRouteLatLngs, { 
+                color: '#ffffff', 
+                weight: 2, 
+                dashArray: '5, 8', 
+                opacity: 0.9, 
+                customType: 'front' 
+            }).addTo(mapInstance);
+
+            // 2. 將它們加入圖層管理
             mapLayers[rowId].push(polylineBack, polylineFront);
+            
             console.log("當前路線節點:", routeResult.nodes);
-        }
-    });
-    document.getElementById("totalCount").innerText = validCount;
-    document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
-    document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
-    document.getElementById("summaryResult").style.display = "block";
-    if (allGlobalLatLngs.length > 0) { mapInstance.fitBounds(L.latLngBounds(allGlobalLatLngs), { padding: [30, 30] }); }
-    if (rows.length > 0) {
-        const firstRowId = rows[0].id;
-    // 確保該行確實有在 rowDataStore中計算出結果才執行 highlight
-        if (rowDataStore[firstRowId]) {
-            highlightRow(firstRowId); 
-        }
-    }
-}
+        } // 這是 if (routeResult && routeResult.dist > 0) 的結束
+    }); // 這是 rows.forEach 的結束
+} // 這是 calculateAllRoutes 的結束
 
 function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
 function getDirectDist(line, s1, s2) { return Math.abs(STATION_DB[line][s1] - STATION_DB[line][s2]); }
