@@ -175,6 +175,29 @@
 </div>
 
 <script>
+// 在 <script> 內新增或確認此函式存在
+function importCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const rows = text.split('\n');
+        rows.forEach(row => {
+            const cols = row.split(','); 
+            if (cols.length >= 2) {
+                const start = cols[0].trim();
+                const end = cols[1].trim();
+                if (stations.includes(start) && stations.includes(end)) {
+                    addNewRow(start, end, 1);
+                }
+            }
+        });
+        setTimeout(calculateAllRoutes, 500);
+    };
+    reader.readAsText(file, 'UTF-8');
+    input.value = "";
+}
 // 台鐵資料庫 (保持最完整資料結構)
 const STATION_DB = {
     "main": {
@@ -624,33 +647,7 @@ function getStationLatLng(stationName) {
     return [25.047, 121.517];
 }
 
-function importCSV(input) {
-   	const file = input.files[0];
-  	if (!file) return;
 
-   		const reader = new FileReader();
-  		reader.onload = function(e) {
-      	const text = e.target.result;
-      	const rows = text.split('\n');
-        
-      	rows.forEach(row => {
-         	const cols = row.split(','); 
-         	if (cols.length >= 2) {
-                	const start = cols[0].trim();
-                	const end = cols[1].trim();
-                	// 驗證車站是否存在於 STATION_DB 中
-                	if (stations.includes(start) && stations.includes(end)) {
-                    addNewRow(start, end, 1);
-                	}
-        	}
-      	});
-        
-      // 匯入後自動執行計算與地圖聚焦
-      setTimeout(calculateAllRoutes, 500);
-      };
-      reader.readAsText(file, 'UTF-8');
-      input.value = ""; // 清空以便重複選取
-}
 </script>
 
 </body>
