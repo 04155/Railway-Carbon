@@ -379,14 +379,23 @@ function calculateAllRoutes() {
             routeResult.nodes.forEach((node, nIdx) => {
                 const pos = getStationLatLng(node);
                 if (pos) {
-                    currentRouteLatLngs.push(pos);
-                }
+                    const isStart = (nIdx === 0);
+                    const marker = L.circleMarker(pos, { 
+                    radius: isStart ? 6 : 5, 
+                    fillColor: isStart ? '#ffffff' : colorHex, 
+                    color: colorHex, 
+                    weight: 2, 
+                    fillOpacity: 1.0 
+                    }).addTo(mapInstance).bindPopup(`<b>行程 [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
                 if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
                     const isStart = (nIdx === 0);
                     const marker = L.circleMarker(pos, { radius: isStart ? 6 : 5, fillColor: isStart ? '#ffffff' : colorHex, color: colorHex, weight: 2, fillOpacity: 1.0 }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
                     mapLayers[rowId].push(marker);
                 }
-            });
+                }else {
+                    console.warn(`車站 ${node} 缺少座標，已忽略其地圖標記。`);
+                }
+            );
 
             const polylineBack = L.polyline(currentRouteLatLngs, { 
                 color: colorHex, 

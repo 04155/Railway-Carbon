@@ -18,7 +18,7 @@
         <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
         
         <!-- 新增：CSV 匯入按鈕與隱藏的 input -->
-        <button class="btn-action btn-calc" style="background: #64748b;" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV</button>
+        <button class="btn-action btn-calc" style="background: #64748b;" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV,xlsx,xls</button>
         <input type="file" id="csvFileInput" accept=".csv,.xlsx, .xls" style="display: none;" onchange="importCSV(this)">
 
         <div class="table-responsive">
