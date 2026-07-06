@@ -1,54 +1,45 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>台鐵批次碳排計算器 (全路線地圖版)</title>
-    <link rel="stylesheet" href="libs/leaflet.css">
-    <script src="libs/leaflet.js"></script>
-    <link rel="stylesheet" href="style.css"> <!-- 引入外部 CSS -->
-</head>
+<meta charset="UTF-8">
+<title>Rail Graph System</title>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<link rel="stylesheet" href="style.css">
+</head>
 <body>
 
-<div class="main-wrapper">
-    <div class="left-panel">
-        <h2>台鐵碳排批次規劃表</h2>
-        <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
-        <div class="table-responsive">
-            <table class="excel-table">
-                <thead>
-                    <tr>
-                        <th style="width: 40px; text-align: center;">圖軸</th>
-                        <th style="width: 130px;">起點站</th>
-                        <th style="width: 130px;">終點站</th>
-                        <th style="width: 65px;">人數</th>
-                        <th style="width: 80px;">里程(km)</th>
-                        <th style="width: 80px;">碳排(kg)</th>
-                        <th style="width: 50px;">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="excelBody"></tbody>
-            </table>
-        </div>
-        <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(this)">
-        <button class="btn-action btn-add" style="background:#6366f1;" onclick="document.getElementById('csvFile').click()">📂 匯入 CSV 批次清單</button>
-        <button class="btn-calc" onclick="calculateAllRoutes()">一鍵批次計算全部行程</button>
-        <div id="summaryResult" class="summary-box">
-            <p><b>📊 批次計算總計結果</b></p>
-            <p>行程總筆數：<span id="totalCount" class="highlight">0</span> 筆</p>
-            <p>合計總里程：<span id="totalDistance" class="highlight">0.0</span> 公里</p>
-            <p>合計總碳排放：<span id="totalCarbon" class="highlight">0.000</span> 公斤 CO<sub>2</sub>e</p>
-            <div id="pathInfoBox" class="path-info">
-                <strong>📍 目前聚焦列詳細路徑：</strong><br>
-                <span id="activePathText" style="color:#1d4ed8; font-weight:bold;"></span>
-            </div>
-        </div>
-    </div>
-    <div class="right-map-panel">
-        <div id="map"></div>
-    </div>
+<h2>🚆 台鐵 Graph 路線系統</h2>
+
+<div id="map"></div>
+
+<table>
+    <thead>
+        <tr>
+            <th>起點</th>
+            <th>終點</th>
+            <th>人數</th>
+            <th>操作</th>
+            <th>距離</th>
+            <th>碳排</th>
+        </tr>
+    </thead>
+    <tbody id="excelBody"></tbody>
+</table>
+
+<button onclick="addRow()">＋新增路線</button>
+<button onclick="calculateAll()">計算全部</button>
+
+<h3>📊 統計</h3>
+<div>
+    行程數：<span id="totalCount">0</span><br>
+    總距離：<span id="totalDistance">0</span><br>
+    碳排：<span id="totalCarbon">0</span>
 </div>
-<script src="main.js"></script> <!-- 引入外部 JS -->
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="main.js"></script>
+
 </body>
 </html>

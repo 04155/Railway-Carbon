@@ -1,15 +1,30 @@
-const GRAPH = {};
-buildGraph();
-addTransferEdges();
+console.log("🚆 Rail Graph Ready");
+
+/* =========================
+   1. 台鐵資料（簡化版 graph seed）
+========================= */
+const STATION_DB = {
+    main: {
+        "臺北": 0, "板橋": 10, "桃園": 40, "新竹": 70,
+        "臺中": 150, "嘉義": 250, "臺南": 300, "高雄": 350
+    }
+};
+
+/* =========================
+   2. Graph 建立
+========================= */
+let GRAPH = {};
 
 function buildGraph() {
-    Object.keys(STATION_DB).forEach(line => {
-        const stations = Object.keys(STATION_DB[line]);
-        const sorted = stations.sort((a, b) => STATION_DB[line][a] - STATION_DB[line][b]);
+    GRAPH = {};
 
-        for (let i = 0; i < sorted.length - 1; i++) {
-            const a = sorted[i];
-            const b = sorted[i + 1];
+    Object.keys(STATION_DB).forEach(line => {
+        const stations = Object.keys(STATION_DB[line])
+            .sort((a, b) => STATION_DB[line][a] - STATION_DB[line][b]);
+
+        for (let i = 0; i < stations.length - 1; i++) {
+            const a = stations[i];
+            const b = stations[i + 1];
 
             const dist = Math.abs(STATION_DB[line][a] - STATION_DB[line][b]);
 
@@ -21,45 +36,49 @@ function buildGraph() {
         }
     });
 }
-//Dijkstra（核心引擎）
-function dijkstra(start, end) {
+
+/* =========================
+   3. Dijkstra
+========================= */
+function getSmartRoute(start, end) {
+    if (start === end) return { dist: 0, nodes: [start] };
+
     const dist = {};
     const prev = {};
     const visited = new Set();
-    const pq = new Set(Object.keys(GRAPH));
 
     Object.keys(GRAPH).forEach(n => dist[n] = Infinity);
     dist[start] = 0;
 
-    while (pq.size > 0) {
-        let u = null;
+    while (true) {
+        let curr = null;
         let min = Infinity;
 
-        pq.forEach(node => {
-            if (dist[node] < min) {
-                min = dist[node];
-                u = node;
+        for (const n in dist) {
+            if (!visited.has(n) && dist[n] < min) {
+                min = dist[n];
+                curr = n;
             }
-        });
+        }
 
-        if (!u) break;
-        pq.delete(u);
-        visited.add(u);
+        if (!curr) break;
+        if (curr === end) break;
 
-        if (u === end) break;
+        visited.add(curr);
 
-        (GRAPH[u] || []).forEach(edge => {
-            const v = edge.to;
-            const alt = dist[u] + edge.dist;
-
-            if (alt < dist[v]) {
-                dist[v] = alt;
-                prev[v] = u;
+        for (const e of GRAPH[curr] || []) {
+            const nd = dist[curr] + e.dist;
+            if (nd < dist[e.to]) {
+                dist[e.to] = nd;
+                prev[e.to] = curr;
             }
-        });
+        }
     }
 
-    // 回推路徑
+    if (dist[end] === Infinity) {
+        return { dist: 0, nodes: [start, end] };
+    }
+
     const path = [];
     let cur = end;
 
@@ -68,51 +87,127 @@ function dijkstra(start, end) {
         cur = prev[cur];
     }
 
-    return {
-        dist: dist[end],
-        nodes: path,
-        pathText: path.join(" → ")
-    };
+    return { dist: dist[end], nodes: path };
 }
-//換 getSmartRoute()
-function getSmartRoute(start, end) {
-    if (start === end) {
-        return { dist: 0, nodes: [start], path: `${start}` };
+
+/* =========================
+   4. Map
+========================= */
+let map;
+let layers = {};
+let rowId = 0;
+
+window.onload = () => {
+    map = L.map("map").setView([23.8, 121.0], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    buildGraph();
+
+    addRow("臺北", "高雄", 1);
+};
+
+/* =========================
+   5. UI
+========================= */
+function addRow(start = "臺北", end = "高雄", people = 1) {
+    rowId++;
+
+    const tr = document.createElement("tr");
+    tr.id = "r_" + rowId;
+
+    tr.innerHTML = `
+        <td><input id="s_${rowId}" value="${start}"></td>
+        <td><input id="e_${rowId}" value="${end}"></td>
+        <td><input id="p_${rowId}" type="number" value="${people}" min="1"></td>
+        <td><button onclick="calculateAll()">算</button></td>
+        <td id="d_${rowId}">-</td>
+        <td id="c_${rowId}">-</td>
+    `;
+
+    document.getElementById("excelBody").appendChild(tr);
+}
+
+/* =========================
+   6. 計算 + 畫圖
+========================= */
+function calculateAll() {
+    Object.values(layers).forEach(ls => ls.forEach(l => map.removeLayer(l)));
+    layers = {};
+
+    let totalDist = 0;
+    let totalCarbon = 0;
+    let count = 0;
+
+    for (let i = 1; i <= rowId; i++) {
+        const s = document.getElementById("s_" + i);
+        const e = document.getElementById("e_" + i);
+        const p = document.getElementById("p_" + i);
+
+        if (!s || !e) continue;
+
+        const start = s.value;
+        const end = e.value;
+        const people = parseInt(p.value) || 1;
+
+        const res = getSmartRoute(start, end);
+        if (res.dist === 0) continue;
+
+        const carbon = res.dist * 0.05 * people;
+
+        document.getElementById("d_" + i).innerText = res.dist.toFixed(1);
+        document.getElementById("c_" + i).innerText = carbon.toFixed(2);
+
+        totalDist += res.dist;
+        totalCarbon += carbon;
+        count++;
+
+        drawRoute(i, res.nodes);
     }
 
-    const result = dijkstra(start, end);
-
-    if (!result.nodes || result.nodes.length === 0) {
-        return { dist: 0, nodes: [start, end], path: "無路徑" };
-    }
-
-    return {
-        dist: result.dist,
-        nodes: result.nodes,
-        path: result.pathText
-    };
+    document.getElementById("totalCount").innerText = count;
+    document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
+    document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(2);
 }
-//轉乘站
-function addTransferEdges() {
-    const stationLines = {};
 
-    Object.keys(STATION_DB).forEach(line => {
-        Object.keys(STATION_DB[line]).forEach(station => {
-            if (!stationLines[station]) stationLines[station] = [];
-            stationLines[station].push(line);
-        });
-    });
+/* =========================
+   7. 畫路線
+========================= */
+const COLORS = ["red", "blue", "green", "orange"];
 
-    Object.keys(stationLines).forEach(station => {
-        const lines = stationLines[station];
-        if (lines.length > 1) {
-            // 同站不同線 = 轉乘（距離=0）
-            for (let i = 0; i < lines.length; i++) {
-                for (let j = i + 1; j < lines.length; j++) {
-                    if (!GRAPH[station]) GRAPH[station] = [];
-                    GRAPH[station].push({ to: station, dist: 0 });
-                }
-            }
-        }
+function drawRoute(id, nodes) {
+    const latlngs = nodes.map(n => getLatLng(n));
+
+    const poly = L.polyline(latlngs, {
+        color: COLORS[id % COLORS.length],
+        weight: 4
+    }).addTo(map);
+
+    layers[id] = [poly];
+
+    latlngs.forEach((p, i) => {
+        L.circleMarker(p, {
+            radius: i === 0 || i === latlngs.length - 1 ? 6 : 3
+        }).addTo(map);
     });
+}
+
+/* =========================
+   8. 座標
+========================= */
+function getLatLng(name) {
+    const geo = {
+        "臺北": [25.047, 121.517],
+        "板橋": [25.013, 121.462],
+        "桃園": [24.989, 121.313],
+        "新竹": [24.801, 120.971],
+        "臺中": [24.137, 120.685],
+        "嘉義": [23.479, 120.441],
+        "臺南": [22.997, 120.212],
+        "高雄": [22.639, 120.302]
+    };
+
+    return geo[name] || [23.8, 121.0];
 }

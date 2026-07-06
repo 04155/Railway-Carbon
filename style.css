@@ -1,115 +1,24 @@
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            padding: 20px; 
-            background-color: #f4f7f6; 
-            margin: 0; 
-            min-height: 100vh;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .main-wrapper {
-            display: flex;
-            width: 100%;
-            max-width: 2100px;
-            height: 900px; 
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            overflow: hidden;
-        }
+body {
+    font-family: Arial;
+}
 
-        .left-panel {
-            width: 650px;
-            min-width: 650px;
-            padding: 25px;
-            box-sizing: border-box;
-            border-right: 1px solid #e5e7eb;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
+#map {
+    height: 400px;
+    margin-bottom: 20px;
+}
 
-        .right-map-panel {
-            flex-grow: 1; 
-            height: 100%;
-            position: relative;
-        }
-        #map {
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
 
-        h2 { color: #1e3a8a; margin-top: 0; font-size: 22px; text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 15px; }
-        
-        /* 響應式表格包裹層 */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            margin-bottom: 15px;
-        }
+th, td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    text-align: center;
+}
 
-        /* Excel 表格樣式 */
-        .excel-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 550px; }
-        .excel-table th { background: #f3f4f6; color: #374151; padding: 10px; border: 1px solid #d1d5db; text-align: left; font-weight: bold; }
-        .excel-table td { padding: 8px; border: 1px solid #e5e7eb; position: relative; vertical-align: middle; }
-        .excel-table tr.active-row { background-color: #eff6ff; font-weight: 600; }
-        .excel-table tr:hover { background-color: #f9fafb; cursor: pointer; }
-        
-        /* 內部輸入元件 */
-        .num-input { width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box; }
-        .btn-action { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
-        .btn-add { background: #10b981; color: white; margin-bottom: 15px; width: auto; align-self: flex-start; }
-        .btn-add:hover { background: #059669; }
-        .btn-del { background: #ef4444; color: white; padding: 4px 8px; }
-        .btn-del:hover { background: #dc2626; }
-        .btn-calc { background: #1d4ed8; color: white; padding: 12px; font-size: 16px; margin-top: 10px; border-radius: 6px; border: none; width: 100%; cursor: pointer; font-weight: bold; }
-        .btn-calc:hover { background: #1e40af; }
-
-        /* 色塊標記指示 */
-        .color-badge { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
-
-        /* 下拉客製選單 */
-        .custom-select-container { position: relative; width: 100%; }
-        .select-trigger { 
-            width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; 
-            box-sizing: border-box; background: white; cursor: pointer;
-            display: flex; justify-content: space-between; align-items: center; min-width: 90px;
-        }
-        .select-trigger::after { content: "▼"; font-size: 9px; color: #9ca3af; }
-
-        /* 修正移動端彈出下拉選單位置 */
-        .dropdown-box { 
-            position: absolute; left: 0; top: 100%; background: white; 
-            border: 1px solid #d1d5db; border-radius: 6px; z-index: 9999; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; padding: 8px; box-sizing: border-box;
-            width: 100%; min-width: 140px;
-        }
-        .custom-select-container.open .dropdown-box { display: block; }
-        .filter-input { 
-            width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; 
-            box-sizing: border-box; font-size: 13px; margin-bottom: 6px;
-        }
-        
-        .station-list { max-height: 150px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
-        .station-item { padding: 6px 10px; cursor: pointer; font-size: 14px; color: #374151; border-radius: 4px; }
-        .station-item:hover, .station-item.selected { background-color: #3b82f6; color: white; }
-        
-        /* 總計與狀態面板 */
-        .summary-box { padding: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-top: 15px; display: none; }
-        .summary-box p { margin: 6px 0; color: #374151; font-size: 15px; }
-        .highlight { font-weight: bold; color: #065f46; font-size: 16px; }
-        .path-info { margin-top: 10px; padding: 10px; background: #f8fafc; border-left: 4px solid #3b82f6; font-size: 13px; display: none; }
-
-        /* RWD 手機版適應 RWD修正 */
-        @media (max-width: 992px) {
-            body { padding: 10px; height: auto; }
-            .main-wrapper { flex-direction: column; height: auto; }
-            .left-panel { width: 100%; min-width: 100%; border-right: none; border-bottom: 2px solid #e5e7eb; height: 550px; padding: 15px; }
-            .right-map-panel { width: 100%; height: 450px; }
-        }
-    </style>
+input {
+    width: 90%;
+}
