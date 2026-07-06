@@ -298,7 +298,13 @@ function calculateAllRoutes() {
     document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
     document.getElementById("summaryResult").style.display = "block";
     if (allGlobalLatLngs.length > 0) { mapInstance.fitBounds(L.latLngBounds(allGlobalLatLngs), { padding: [30, 30] }); }
-    if (rows.length > 0) { highlightRow(rows[0].id); }
+    if (rows.length > 0) {
+        const firstRowId = rows[0].id;
+    // 確保該行確實有在 rowDataStore中計算出結果才執行 highlight
+        if (rowDataStore[firstRowId]) {
+            highlightRow(firstRowId); 
+        }
+    }
 }
 
 function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
