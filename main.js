@@ -355,11 +355,21 @@ function closeAllCombos() {
 }
 document.addEventListener("click", closeAllCombos);
 
+// =================================================================
+// 🚀 完整版 calculateAllRoutes (包含自動轉乘、地圖標記、軌跡連線與等比例縮放)
+// =================================================================
 function calculateAllRoutes() {
-    Object.keys(mapLayers).forEach(key => { mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); });
+    // 清除地圖上所有舊的線條與標記
+    Object.keys(mapLayers).forEach(key => { 
+        mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); 
+    });
     mapLayers = {};
+    
     const rows = document.querySelectorAll("#excelBody tr");
     let totalDist = 0, totalCarbon = 0, validCount = 0, index = 0;
+    
+    // 💡 宣告一個收集全域座標的陣列，用來讓地圖等比例縮放
+    const allRouteLatLngs = []; 
 
     rows.forEach(row => {
         const rowId = row.id;
@@ -371,69 +381,103 @@ function calculateAllRoutes() {
         
         if (startName === endName) return; 
         
-        const routeResult = getSmartRoute(startName, endName);
-        if (routeResult && routeResult.dist > 0) {
+        // 呼叫 Dijkstra 自動轉乘最佳路徑演算法
+        const routeResult = findShortestPath(startName, endName);
+        
+        if (routeResult && routeResult.distance > 0) {
             const CARBON_FACTOR = 0.048;
-            const trainCarbon = routeResult.dist * CARBON_FACTOR * passengers;
+            const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
             
-            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.dist.toFixed(1);
+            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
             document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
             
-            rowDataStore[rowId] = { dist: routeResult.dist, carbon: trainCarbon, path: routeResult.path, nodes: routeResult.nodes };
-            totalDist += routeResult.dist; 
+            // 將完整路徑節點與名稱記錄到 store 中（供點擊與匯出 Excel 使用）
+            // 這裡確保與演算法中的 nodes / path 同步
+            routeResult.nodes = routeResult.path; 
+            
+            rowDataStore[rowId] = { 
+                dist: routeResult.distance, 
+                carbon: trainCarbon, 
+                path: routeResult.path.join(' → '), 
+                nodes: routeResult.nodes 
+            };
+            
+            totalDist += routeResult.distance; 
             totalCarbon += trainCarbon; 
             validCount++;
             
             mapLayers[rowId] = [];
             const currentRouteLatLngs = [];
             
+            // 遍歷所有經過的轉乘/直達節點（已修正語法與重複標記問題）
             routeResult.nodes.forEach((node, nIdx) => {
                 const pos = getStationLatLng(node);
                 if (pos) {
-                    const isStart = (nIdx === 0);
-                    const marker = L.circleMarker(pos, { 
-                    radius: isStart ? 6 : 5, 
-                    fillColor: isStart ? '#ffffff' : colorHex, 
-                    color: colorHex, 
-                    weight: 2, 
-                    fillOpacity: 1.0 
-                    }).addTo(mapInstance).bindPopup(`<b>行程 [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
-                if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
-                    const isStart = (nIdx === 0);
-                    const marker = L.circleMarker(pos, { radius: isStart ? 6 : 5, fillColor: isStart ? '#ffffff' : colorHex, color: colorHex, weight: 2, fillOpacity: 1.0 }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
-                    mapLayers[rowId].push(marker);
-                }
-                }else {
+                    currentRouteLatLngs.push(pos);
+                    // 同步收集到全域座標陣列，方便最後地圖縮放
+                    allRouteLatLngs.push(pos);
+                    
+                    // 💡 只有第一站（起點）和最後一站（終點）才畫圓點標記
+                    if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
+                        const isStart = (nIdx === 0);
+                        const marker = L.circleMarker(pos, { 
+                            radius: isStart ? 6 : 5, 
+                            fillColor: isStart ? '#ffffff' : colorHex, 
+                            color: colorHex, 
+                            weight: 2, 
+                            fillOpacity: 1.0 
+                        }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
+                        
+                        mapLayers[rowId].push(marker);
+                    }
+                } else {
                     console.warn(`車站 ${node} 缺少座標，已忽略其地圖標記。`);
                 }
-            } );
+            });
 
-            const polylineBack = L.polyline(currentRouteLatLngs, { 
-                color: colorHex, 
-                weight: 5, 
-                opacity: 0.7, 
-                customType: 'back' 
-            }).addTo(mapInstance);
+            // 繪製沿著鐵路車站的軌跡線條
+            if (currentRouteLatLngs.length >= 2) {
+                const polylineBack = L.polyline(currentRouteLatLngs, { 
+                    color: colorHex, 
+                    weight: 5, 
+                    opacity: 0.7, 
+                    customType: 'back' 
+                }).addTo(mapInstance);
 
-            const polylineFront = L.polyline(currentRouteLatLngs, { 
-                color: '#ffffff', 
-                weight: 2, 
-                dashArray: '5, 8', 
-                opacity: 0.9, 
-                customType: 'front' 
-            }).addTo(mapInstance);
+                const polylineFront = L.polyline(currentRouteLatLngs, { 
+                    color: '#ffffff', 
+                    weight: 2, 
+                    dashArray: '5, 8', 
+                    opacity: 0.9, 
+                    customType: 'front' 
+                }).addTo(mapInstance);
 
-            mapLayers[rowId].push(polylineBack, polylineFront);
+                mapLayers[rowId].push(polylineBack, polylineFront);
+            }
         }
     });
 
-    // 新增：重新計算完成後，渲染總結看板
+    // 更新總計看板
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
         summaryBox.style.display = "block";
         document.getElementById("totalCount").innerText = validCount;
         document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
         document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
+        
+        // 💡 智慧縮放：讓地圖自動等比例縮放至完美看見所有路線的邊界
+        if (allRouteLatLngs.length > 0 && mapInstance) {
+            const bounds = L.featureGroup(
+                allRouteLatLngs.map(latlng => L.marker(latlng))
+            ).getBounds();
+            
+            mapInstance.fitBounds(bounds, {
+                padding: [50, 50],  // 畫面邊緣留白 50px，確保標記不破格
+                maxZoom: 12,        // 避免只有一筆超近行程時被放到太大
+                animate: true,      // 開啟平滑動畫
+                duration: 0.8       // 動畫持續 0.8 秒
+            });
+        }
     } else {
         summaryBox.style.display = "none";
     }
