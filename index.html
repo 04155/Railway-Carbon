@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台鐵批次碳排計算器 (全路線地圖版)</title>
-    <link rel="stylesheet" href="libs/leaflet.css">
-    <script src="libs/leaflet.js"></script>
-    <link rel="stylesheet" href="style.css"> <!-- 引入外部 CSS -->
+    <!-- 引入 Leaflet CSS (僅一份) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- 引入外部 CSS -->
+    <link rel="stylesheet" href="style.css">
 </head>
-<script src="main.js"></script>
 <body>
 
 <div class="main-wrapper">
@@ -31,23 +31,28 @@
                 <tbody id="excelBody"></tbody>
             </table>
         </div>
-        <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(this)">
-        <button class="btn-action btn-add" style="background:#6366f1;" onclick="document.getElementById('csvFile').click()">📂 匯入 CSV 批次清單</button>
-        <button class="btn-calc" onclick="calculateAllRoutes()">一鍵批次計算全部行程</button>
-        <div id="summaryResult" class="summary-box">
-            <p><b>📊 批次計算總計結果</b></p>
-            <p>行程總筆數：<span id="totalCount" class="highlight">0</span> 筆</p>
-            <p>合計總里程：<span id="totalDistance" class="highlight">0.0</span> 公里</p>
-            <p>合計總碳排放：<span id="totalCarbon" class="highlight">0.000</span> 公斤 CO<sub>2</sub>e</p>
-            <div id="pathInfoBox" class="path-info">
-                <strong>📍 目前聚焦列詳細路徑：</strong><br>
-                <span id="activePathText" style="color:#1d4ed8; font-weight:bold;"></span>
-            </div>
+
+<div id="summaryResult" class="summary-box" style="display: none;">
+            <p>共 <span id="totalCount">0</span> 筆行程</p>
+            <p>總預計里程：<span id="totalDistance">0</span> km</p>
+            <p>總碳排放量：<span id="totalCarbon">0</span> kg CO2e</p>
+        </div>
+        
+        <div id="pathInfoBox" class="info-box" style="display: none;">
+            <h4>當前路線詳情</h4>
+            <p id="activePathText">-</p>
         </div>
     </div>
-    <div class="right-map-panel">
+
+    <div class="right-panel">
         <div id="map"></div>
     </div>
 </div>
+
+<!-- 引入 Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- 引入我們剛剛分三部分完成的 main.js -->
+<script src="main.js"></script>
+
 </body>
 </html>
