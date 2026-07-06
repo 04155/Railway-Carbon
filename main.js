@@ -1,10 +1,4 @@
-// main.js - 測試版本
-console.log("main.js 已載入");
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("網頁結構已就緒");
-});
-// main.js - Part 1: Constants and Global Variables
+// main.js - Constants and Global Variables
 const STATION_DB = {
     "main": {
         "基隆": 0.0, "三坑": 1.5, "八堵": 3.9, "七堵": 6.2, "百福": 8.9, "五堵": 11.9,
@@ -31,7 +25,7 @@ const STATION_DB = {
     "south": { "高雄": 0.0, "民族": 1.3, "科工館": 2.4, "正義": 4.2, "鳳山": 5.5, "後莊": 9.4, "九曲堂": 13.6, "六塊厝": 18.6, "屏東": 20.9, "歸來": 23.5, "麟洛": 25.8, "西勢": 28.2, "竹田": 31.9, "潮州": 35.9, "崁頂": 40.8, "南州": 43.2, "鎮安": 47.0, "林邊": 50.1, "佳冬": 54.0, "東海": 57.1, "枋寮": 61.2, "加祿": 66.5, "內獅": 69.0, "枋山": 73.8, "大武": 104.0, "瀧溪": 115.7, "金崙": 124.1, "太麻里": 135.0, "知本": 146.7, "康樂": 153.8, "臺東": 159.3 },
     "pingxi": { "三貂嶺": 0.0, "大華": 3.6, "十分": 6.4, "望古": 8.1, "嶺腳": 10.2, "平溪": 11.2, "菁桐": 12.9 },
     "neiwan": { "新竹": 0.0, "北新竹": 1.4, "千甲": 3.6, "新莊": 6.6, "竹中": 7.9, "上員": 10.6, "榮華": 15.0, "竹東": 16.6, "橫山": 20.1, "九讚頭": 22.1, "合興": 24.3, "富貴": 25.7, "內灣": 27.9 },
-    "jiji": { "二水": 0.0, "源泉": 3.0, "濁水": 10.8, "龍泉": 15.7, "集集": 20.0, "水里": 27.4, "車埕": 29.6 },
+    "jiji": { "二水": 0.0, "源泉": 3.0, "濁水": 10.8, "動泉": 15.7, "集集": 20.0, "水里": 27.4, "車埕": 29.6 },
     "chengzhui": { "成功": 0.0, "追分": 2.2 },
     "shalun": { "中洲": 0.0, "長榮大學": 2.6, "沙崙": 5.7 },
     "liujia": { "竹中": 0.0, "六家": 3.1 },
@@ -73,8 +67,6 @@ let mapLayers = {};
 let rowCounter = 0;
 let rowDataStore = {};
 
-// main.js - Part 2: Map Initialization and Row Management
-
 document.addEventListener('DOMContentLoaded', () => {
     console.log("JS 載入成功");
     mapInstance = L.map('map').setView([23.8, 121.0], 7.5);
@@ -95,23 +87,19 @@ function importCSV(input) {
         const text = e.target.result;
         const rows = text.split('\n');
         
-        // 1. 先清空現有表格（如果需要的話，避免重複）
-        // document.getElementById("excelBody").innerHTML = "";
-        
-        // 2. 透過 Promise 確保每行 DOM 確實生成
         rows.forEach(row => {
+            if(!row.trim()) return;
             const cols = row.split(','); 
             if (cols.length >= 2) {
                 const start = cols[0].trim();
                 const end = cols[1].trim();
+                const pass = cols[2] ? parseInt(cols[2].trim()) || 1 : 1;
                 if (stations.includes(start) && stations.includes(end)) {
-                    addNewRow(start, end, 1);
+                    addNewRow(start, end, pass);
                 }
             }
         });
         
-        // 3. 確保所有 DOM 更新完成後，再統一執行一次計算
-        // 使用一個稍微長一點的延遲，或者確認 DOM 載入狀態
         setTimeout(() => {
             calculateAllRoutes();
             console.log("CSV 匯入完畢，已重新計算路徑");
@@ -161,8 +149,8 @@ function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
     `;
     
     tbody.appendChild(tr);
-    initTableRowSelect(`${rowId}_startCombo`, `${rowId}_startTrigger`, () => resetRowResults(rowId));
-    initTableRowSelect(`${rowId}_endCombo`, `${rowId}_endTrigger`, () => resetRowResults(rowId));
+    initTableRowSelect(`${rowId}_startCombo`, `${rowId}_startTrigger`, () => { resetRowResults(rowId); calculateAllRoutes(); });
+    initTableRowSelect(`${rowId}_endCombo`, `${rowId}_endTrigger`, () => { resetRowResults(rowId); calculateAllRoutes(); });
 }
 
 function deleteRow(e, rowId) {
@@ -183,8 +171,6 @@ function resetRowResults(rowId) {
     document.getElementById(`${rowId}_distanceText`).innerText = "-";
     document.getElementById(`${rowId}_carbonText`).innerText = "-";
 }
-
-// main.js - Part 3: Map Interaction, Routing Logic, and Select Controls
 
 function highlightRow(rowId) {
     document.querySelectorAll("#excelBody tr").forEach(tr => tr.classList.remove("active-row"));
@@ -266,7 +252,7 @@ function calculateAllRoutes() {
     Object.keys(mapLayers).forEach(key => { mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); });
     mapLayers = {};
     const rows = document.querySelectorAll("#excelBody tr");
-    let totalDist = 0, totalCarbon = 0, validCount = 0, allGlobalLatLngs = [], index = 0;
+    let totalDist = 0, totalCarbon = 0, validCount = 0, index = 0;
 
     rows.forEach(row => {
         const rowId = row.id;
@@ -280,28 +266,30 @@ function calculateAllRoutes() {
         
         const routeResult = getSmartRoute(startName, endName);
         if (routeResult && routeResult.dist > 0) {
-
             const CARBON_FACTOR = 0.048;
             const trainCarbon = routeResult.dist * CARBON_FACTOR * passengers;
+            
             document.getElementById(`${rowId}_distanceText`).innerText = routeResult.dist.toFixed(1);
             document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
+            
             rowDataStore[rowId] = { dist: routeResult.dist, carbon: trainCarbon, path: routeResult.path, nodes: routeResult.nodes };
-            totalDist += routeResult.dist; totalCarbon += trainCarbon; validCount++;
+            totalDist += routeResult.dist; 
+            totalCarbon += trainCarbon; 
+            validCount++;
+            
             mapLayers[rowId] = [];
             const currentRouteLatLngs = [];
+            
             routeResult.nodes.forEach((node, nIdx) => {
                 const pos = getStationLatLng(node);
                 currentRouteLatLngs.push(pos);
-                allGlobalLatLngs.push(pos);
                 if (nIdx === 0 || nIdx === routeResult.nodes.length - 1) {
                     const isStart = (nIdx === 0);
                     const marker = L.circleMarker(pos, { radius: isStart ? 6 : 5, fillColor: isStart ? '#ffffff' : colorHex, color: colorHex, weight: 2, fillOpacity: 1.0 }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
                     mapLayers[rowId].push(marker);
                 }
             });
-            console.log("正在繪製 rowId:", rowId, "座標陣列內容:", currentRouteLatLngs);
 
-            // 1. 統一宣告這兩個變數，不再重複使用 const
             const polylineBack = L.polyline(currentRouteLatLngs, { 
                 color: colorHex, 
                 weight: 5, 
@@ -317,24 +305,24 @@ function calculateAllRoutes() {
                 customType: 'front' 
             }).addTo(mapInstance);
 
-            // 2. 將它們加入圖層管理
             mapLayers[rowId].push(polylineBack, polylineFront);
-            
-            console.log("當前路線節點:", routeResult.nodes);
-        } // 這是 if (routeResult && routeResult.dist > 0) 的結束
-    }); // 這是 rows.forEach 的結束
-} // 這是 calculateAllRoutes 的結束
+        }
+    });
+
+    // 新增：重新計算完成後，渲染總結看板
+    const summaryBox = document.getElementById("summaryResult");
+    if (validCount > 0) {
+        summaryBox.style.display = "block";
+        document.getElementById("totalCount").innerText = validCount;
+        document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
+        document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
+    } else {
+        summaryBox.style.display = "none";
+    }
+}
 
 function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
 function getDirectDist(line, s1, s2) { return Math.abs(STATION_DB[line][s1] - STATION_DB[line][s2]); }
-function getBranchPivot(station) {
-    const lines = getStationLines(station);
-    if (lines.length === 1) {
-        const ln = lines[0];
-        if (ln === "pingxi") return "三貂嶺"; if (ln === "jiji") return "二水"; if (ln === "shalun") return "中洲"; if (ln === "shenao") return "瑞芳"; if (ln === "liujia" || ln === "neiwan") return "竹中";
-    }
-    return null;
-}
 function getRouteNodesList(line, s1, s2) {
     const lineStations = STATION_DB[line];
     const s1Dist = lineStations[s1], s2Dist = lineStations[s2];
@@ -344,16 +332,19 @@ function getRouteNodesList(line, s1, s2) {
     if (s1Dist > s2Dist) inRange.reverse();
     return inRange;
 }
+
 function getSmartRoute(start, end) {
     if (start === end) return { dist: 0, path: start, nodes: [start] };
     const sLines = getStationLines(start), eLines = getStationLines(end);
     for (let sL of sLines) {
         if (eLines.includes(sL)) { return { dist: getDirectDist(sL, start, end), path: `${start} → ${end}`, nodes: getRouteNodesList(sL, start, end) }; }
     }
-    // (路線計算其餘邏輯已包含在內) ...
-    return { dist: 0, path: "未配置路線", nodes: [start, end] };
+    
+    // 防呆兜底：如果資料庫查不到直達（如跨幹線），回傳兩站點直線，距離暫估
+    return { dist: 50, path: `${start} 至 ${end} (跨線路暫估)`, nodes: [start, end] };
 }
+
 function getStationLatLng(stationName) {
     if (STATION_GEO[stationName]) return STATION_GEO[stationName];
-    return [25.047, 121.517];
+    return [25.047, 121.517]; // 預設臺北車站
 }

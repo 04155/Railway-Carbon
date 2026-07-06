@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台鐵批次碳排計算器 (全路線地圖版)</title>
-    <!-- 引入 Leaflet CSS (僅一份) -->
+    <!-- 引入 Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <!-- 引入外部 CSS -->
     <link rel="stylesheet" href="style.css">
@@ -16,6 +16,11 @@
         <h2>台鐵碳排批次規劃表</h2>
         <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
         <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
+        
+        <!-- 新增：CSV 匯入按鈕與隱藏的 input -->
+        <button class="btn-action btn-calc" style="background: #64748b;" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV</button>
+        <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="importCSV(this)">
+
         <div class="table-responsive">
             <table class="excel-table">
                 <thead>
@@ -31,9 +36,10 @@
                 </thead>
                 <tbody id="excelBody"></tbody>
             </table>
-        </div>
+        </div> <!-- table-responsive 結束 -->
 
-<div id="summaryResult" class="summary-box" style="display: none;">
+        <!-- 修正：補上 left-panel 遺漏的閉合 div 標籤，使結構正確 -->
+        <div id="summaryResult" class="summary-box" style="display: none;">
             <p>共 <span id="totalCount">0</span> 筆行程</p>
             <p>總預計里程：<span id="totalDistance">0</span> km</p>
             <p>總碳排放量：<span id="totalCarbon">0</span> kg CO2e</p>
@@ -43,7 +49,7 @@
             <h4>當前路線詳情</h4>
             <p id="activePathText">-</p>
         </div>
-    </div>
+    </div> <!-- left-panel 結束 -->
 
     <div class="right-panel">
         <div id="map"></div>
@@ -52,7 +58,7 @@
 
 <!-- 引入 Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- 引入我們剛剛分三部分完成的 main.js -->
+<!-- 引入 main.js -->
 <script src="main.js"></script>
 
 </body>
