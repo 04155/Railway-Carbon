@@ -297,6 +297,7 @@ function calculateAllRoutes() {
     document.getElementById("summaryResult").style.display = "block";
     if (allGlobalLatLngs.length > 0) { mapInstance.fitBounds(L.latLngBounds(allGlobalLatLngs), { padding: [30, 30] }); }
     if (rows.length > 0) { highlightRow(rows[0].id); }
+    console.log("當前路線節點:", routeResult.nodes);
 }
 
 function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
