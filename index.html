@@ -39,7 +39,7 @@
             padding: 25px;
             box-sizing: border-box;
             border-right: 1px solid #e5e7eb;
-            overflow-y: visible;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
@@ -60,7 +60,7 @@
         /* 響應式表格包裹層 */
         .table-responsive {
             width: 100%;
-            overflow-x: visible;
+            overflow-x: auto;
             margin-bottom: 15px;
         }
 
@@ -132,8 +132,8 @@
         <h2>台鐵碳排批次規劃表</h2>
         
         <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
-        
-        <div class="table-responsive">
+        // <input type="file" id="csvFile" accept=".csv" onchange="importCSV(this)">
+	  <div class="table-responsive">
             <table class="excel-table">
                 <thead>
                     <tr>
@@ -151,12 +151,10 @@
                 </tbody>
             </table>
         </div>
+	<input type="file" id="csvFile" accept=".csv" style="display:none" onchange="importCSV(this)">
+	<button class="btn-action btn-add" style="background:#6366f1;" onclick="document.getElementById('csvFile').click()">📂 匯入 CSV 批次清單</button>
 
         <button class="btn-calc" onclick="calculateAllRoutes()">一鍵批次計算全部行程</button>
-	  <button class="btn-calc" style="background-color: #059669; margin-top: 10px;" onclick="exportToCSV()">💾 匯出結果為 CSV</button>
-
-	  <input type="file" id="importFile" style="display:none" accept=".csv" onchange="importCSV(this)">
-	  <button class="btn-calc" style="background-color: #f59e0b; margin-top: 10px;" onclick="document.getElementById('importFile').click()">📂 匯入 CSV 行程</button>
 
         <div id="summaryResult" class="summary-box">
             <p><b>📊 批次計算總計結果</b></p>
@@ -276,7 +274,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }).addTo(mapInstance);
 
     // 預設建立三筆測試行程
-    addNewRow("臺北", "高雄", 1);
+    addNewRow("臺北", "高雄", 2);
 
     setTimeout(calculateAllRoutes, 300);
 });
@@ -447,7 +445,6 @@ function calculateAllRoutes() {
         if (startName === endName) return; 
         
         const routeResult = getSmartRoute(startName, endName);
-	  console.log(`計算 ${startName} 到 ${endName}:`, routeResult);
         if (routeResult.dist > 0) {
             const CARBON_FACTOR = 0.048;
             const trainCarbon = routeResult.dist * CARBON_FACTOR * passengers;
@@ -498,10 +495,7 @@ function calculateAllRoutes() {
 
             mapLayers[rowId].push(polylineBack);
             mapLayers[rowId].push(polylineFront);
-        }else {
- 		// 當計算不到時，給予 UI 反饋，不要只顯示 '-'
- 		document.getElementById(`${rowId}_distanceText`).innerText = "無法計算";
-	  }
+        }
     });
     
     document.getElementById("totalCount").innerText = validCount;
@@ -511,7 +505,7 @@ function calculateAllRoutes() {
     
     if (allGlobalLatLngs.length > 0) {
         const bounds = L.latLngBounds(allGlobalLatLngs);
-        mapInstance.fitBounds(bounds, { padding: [50, 30] });
+        mapInstance.fitBounds(bounds, { padding: [30, 30] });
     }
     if (rows.length > 0) { highlightRow(rows[0].id); }
 }
@@ -546,44 +540,17 @@ function getRouteNodesList(line, s1, s2) {
     return inRangeStations;
 }
 
-const routeCache = {};
-
-function getSmartRoute(start, end, visited = new Set()) {
-    // 建立唯一的 key
-    const cacheKey = `${start}-${end}`;
-    if (routeCache[cacheKey]) return routeCache[cacheKey]; // 如果算過，直接回傳
-
-    // ... 原有的邏輯 (中間保持不變) ...
-
-    const result = { dist: bestDist, path: bestPath, nodes: bestNodes };
-    
-    // 只有在得到有效結果時才快取
-    if (result.dist < Infinity) {
-        routeCache[cacheKey] = result;
-    }
-    
-    return result;
-}
-
-function getSmartRoute(start, end, visited = new Set()) {
-    // 1. 防止無限遞迴：若該站已走過，直接返回無效距離
-    if (visited.has(start)) return { dist: Infinity, path: "循環路徑", nodes: [] };
-    visited.add(start);
-
+function getSmartRoute(start, end) {
     if (start === end) return { dist: 0, path: start, nodes: [start] };
-
     const sLines = getStationLines(start);
     const eLines = getStationLines(end);
 
-    // 2. 原有的直達邏輯
     for (let sL of sLines) {
         if (eLines.includes(sL)) {
             const directNodes = getRouteNodesList(sL, start, end);
             return { dist: getDirectDist(sL, start, end), path: `${start} → ${end}`, nodes: directNodes };
         }
     }
-
-    // 3. 原有的特殊轉乘 (竹中/追分)
     if ((sLines.includes("liujia") && eLines.includes("neiwan")) || (sLines.includes("neiwan") && eLines.includes("liujia"))) {
         const nLiujia = getRouteNodesList(sLines.includes("liujia") ? "liujia" : "neiwan", start, "竹中");
         const nNeiwan = getRouteNodesList(sLines.includes("liujia") ? "neiwan" : "liujia", "竹中", end);
@@ -592,36 +559,51 @@ function getSmartRoute(start, end, visited = new Set()) {
     if ((start === "成功" && end === "追分") || (start === "追分" && end === "成功")) {
         return { dist: 2.2, path: `${start} → ${end}`, nodes: [start, end] };
     }
-
-    // 4. 原有的 Pivot 邏輯 (需傳入 visited 以防止遞迴溢位)
     const startPivot = getBranchPivot(start);
     if (startPivot) {
         const branchLine = sLines[0];
         const branchNodes = getRouteNodesList(branchLine, start, startPivot);
-        const mainRoute = getSmartRoute(startPivot, end, new Set(visited));
-        if (mainRoute.dist < Infinity) return { dist: getDirectDist(branchLine, start, startPivot) + mainRoute.dist, path: `${start} → [${startPivot}轉乘] → ${mainRoute.path.replace(startPivot + ' → ', '')}`, nodes: [...branchNodes, ...mainRoute.nodes.slice(1)] };
+        const mainRoute = getSmartRoute(startPivot, end);
+        return { dist: getDirectDist(branchLine, start, startPivot) + mainRoute.dist, path: `${start} → [${startPivot}轉乘] → ${mainRoute.path.replace(startPivot + ' → ', '')}`, nodes: [...branchNodes, ...mainRoute.nodes.slice(1)] };
     }
-
-    // 5. 樞紐轉乘邏輯 (核心修正區：傳入 new Set(visited))
+    const endPivot = getBranchPivot(end);
+    if (endPivot) {
+        const branchLine = eLines[0];
+        const mainRoute = getSmartRoute(start, endPivot);
+        const branchNodes = getRouteNodesList(branchLine, endPivot, end);
+        return { dist: mainRoute.dist + getDirectDist(branchLine, endPivot, end), path: `${mainRoute.path} → [${endPivot}轉乘] → ${end}`, nodes: [...mainRoute.nodes, ...branchNodes.slice(1)] };
+    }
     let bestDist = Infinity; let bestPath = "未知"; let bestNodes = [];
-    const hubs = ["臺北", "彰化", "竹南", "八堵", "高雄", "臺東", "成功", "竹中", "二水", "新左營", "臺中", "嘉義"];
-
+    const hubs = ["彰化", "竹南", "八堵", "高雄", "臺東", "成功"];
     for (let hub of hubs) {
-        if (hub === start || hub === end) continue;
         const hLines = getStationLines(hub);
         const matchStartLine = sLines.find(l => hLines.includes(l));
-        
-        if (matchStartLine) {
+        const matchEndLine = eLines.find(l => hLines.includes(l));
+        if (matchStartLine && matchEndLine) {
             const d1 = getDirectDist(matchStartLine, start, hub);
-            const segment1 = getRouteNodesList(matchStartLine, start, hub);
-            
-            // 關鍵：將 visited 傳遞下去，確保路徑不重複
-            const subRoute = getSmartRoute(hub, end, new Set(visited));
-            
-            if (subRoute.dist < Infinity && (d1 + subRoute.dist) < bestDist) {
-                bestDist = d1 + subRoute.dist;
-                bestPath = `${start} → [${hub}轉乘] → ${subRoute.path.replace(hub + ' → ', '')}`;
-                bestNodes = [...segment1, ...subRoute.nodes.slice(1)];
+            const d2 = getDirectDist(matchEndLine, hub, end);
+            if ((d1 + d2) < bestDist) {
+                bestDist = d1 + d2;
+                bestPath = `${start} → [${hub}轉乘] → ${end}`;
+                const segment1 = getRouteNodesList(matchStartLine, start, hub);
+                const segment2 = getRouteNodesList(matchEndLine, hub, end);
+                bestNodes = [...segment1, ...segment2.slice(1)];
+            }
+        }
+    }
+    if (bestNodes.length === 0) {
+        for (let hub of hubs) {
+            const hLines = getStationLines(hub);
+            const matchStartLine = sLines.find(l => hLines.includes(l));
+            if (matchStartLine) {
+                const d1 = getDirectDist(matchStartLine, start, hub);
+                const segment1 = getRouteNodesList(matchStartLine, start, hub);
+                const subRoute = getSmartRoute(hub, end);
+                if (subRoute.dist > 0 && (d1 + subRoute.dist) < bestDist) {
+                    bestDist = d1 + subRoute.dist;
+                    bestPath = `${start} → [${hub}轉乘] → ${subRoute.path.replace(hub + ' → ', '')}`;
+                    bestNodes = [...segment1, ...subRoute.nodes.slice(1)];
+                }
             }
         }
     }
@@ -642,83 +624,32 @@ function getStationLatLng(stationName) {
     return [25.047, 121.517];
 }
 
-//匯出csv button
-function escapeCSV(val) {
-    if (val === undefined || val === null) return '""';
-    return `"${String(val).replace(/"/g, '""')}"`;
-}
-
-function exportToCSV() {
-    let csv = [];
-    const rows = document.querySelectorAll("#excelBody tr");
-    
-    // 表頭
-    csv.push("起點,終點,人數,里程(km),碳排(kg)");
-    
-    // 遍歷每一列資料
-    rows.forEach(row => {
-        const start = row.querySelector('[id*="_startTrigger"]').innerText;
-        const end = row.querySelector('[id*="_endTrigger"]').innerText;
-        const pass = row.querySelector('.num-input').value;
-        const dist = row.querySelector('[id*="_distanceText"]').innerText;
-        const carbon = row.querySelector('[id*="_carbonText"]').innerText;
-        
-        csv.push(`${escapeCSV(start)},${escapeCSV(end)},${pass},${dist},${carbon}`);
-    });
-
-    // 建立下載連結
-    const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const downloadLink = document.createElement("a");
-    downloadLink.download = "台鐵碳排計算結果.csv";
-    downloadLink.href = window.URL.createObjectURL(csvFile);
-    downloadLink.click();
-}
-
-//匯入csv
 function importCSV(input) {
-    const file = input.files[0];
-    if (!file) return;
+   	const file = input.files[0];
+  	if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        const lines = text.split('\n');
+   		const reader = new FileReader();
+  		reader.onload = function(e) {
+      	const text = e.target.result;
+      	const rows = text.split('\n');
         
-        // 清空現有表格
-        document.getElementById("excelBody").innerHTML = "";
-        rowCounter = 0;
-        rowDataStore = {};
-
-        // 從第 1 行開始讀取（跳過表頭）
-        for (let i = 1; i < lines.length; i++) {
-            const rowData = parseCSVLine(lines[i]);
-            if (rowData.length >= 3) {
-                const [start, end, pass] = rowData;
-                // 新增一列
-                addNewRow(start, end, parseInt(pass) || 1);
-            }
-        }
-        // 解析完成後自動計算
-        calculateAllRoutes();
-    };
-    reader.readAsText(file, 'UTF-8');
-    input.value = ""; // 重置 input 以便下次可選同一檔案
-}
-
-// 輔助解析 CSV 行（處理被引號包住的逗號）
-function parseCSVLine(line) {
-    const result = [];
-    let cur = "";
-    let inQuotes = false;
-    for (let char of line) {
-        if (char === '"') inQuotes = !inQuotes;
-        else if (char === ',' && !inQuotes) {
-            result.push(cur);
-            cur = "";
-        } else cur += char;
-    }
-    result.push(cur);
-    return result.map(s => s.trim());
+      	rows.forEach(row => {
+         	const cols = row.split(','); 
+         	if (cols.length >= 2) {
+                	const start = cols[0].trim();
+                	const end = cols[1].trim();
+                	// 驗證車站是否存在於 STATION_DB 中
+                	if (stations.includes(start) && stations.includes(end)) {
+                    addNewRow(start, end, 1);
+                	}
+        	}
+      	});
+        
+      // 匯入後自動執行計算與地圖聚焦
+      setTimeout(calculateAllRoutes, 500);
+      };
+      reader.readAsText(file, 'UTF-8');
+      input.value = ""; // 清空以便重複選取
 }
 </script>
 
