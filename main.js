@@ -346,5 +346,5 @@ function getSmartRoute(start, end) {
 
 function getStationLatLng(stationName) {
     if (STATION_GEO[stationName]) return STATION_GEO[stationName];
-    return [25.047, 121.517]; // 預設臺北車站
+    return null;
 }
