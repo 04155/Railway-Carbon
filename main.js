@@ -31,7 +31,53 @@ const STATION_DB = {
     "liujia": { "竹中": 0.0, "六家": 3.1 },
     "shenao": { "瑞芳": 0.0, "海科館": 4.3, "八斗子": 4.7 }
 };
+const RAILWAY_GRAPH = {};
 
+function initRailwayGraph() {
+    for (let lineName in STATION_DB) {
+        const line = STATION_DB[lineName];
+        // 取得該線路所有車站名稱的陣列 (例如: ["基隆", "三坑", "八堵", ...])
+        const stations = Object.keys(line); 
+        
+        for (let i = 0; i < stations.length; i++) {
+            const currentStation = stations[i];
+            const currentDist = line[currentStation];
+            
+            // 初始化圖形中的節點
+            if (!RAILWAY_GRAPH[currentStation]) {
+                RAILWAY_GRAPH[currentStation] = {};
+            }
+            
+            // 如果有「下一站」，計算兩者差值並建立雙向連結
+            if (i < stations.length - 1) {
+                const nextStation = stations[i + 1];
+                const nextDist = line[nextStation];
+                // 計算相鄰兩站的實際距離（取絕對值防止負數）
+                const distance = Math.abs(nextDist - currentDist); 
+                
+                // 建立目前站往下一站的連線
+                RAILWAY_GRAPH[currentStation][nextStation] = distance;
+                
+                // 建立下一站往目前站的連線（確保可以雙向行駛）
+                if (!RAILWAY_GRAPH[nextStation]) {
+                    RAILWAY_GRAPH[nextStation] = {};
+                }
+                RAILWAY_GRAPH[nextStation][currentStation] = distance;
+            }
+        }
+    }
+    
+    // 💡 關鍵手動轉乘點補強：因為您的資料中，不同線路的轉乘大站里程是分開算的（例如：竹南在 main 是 125.3，在 coast 是 0.0）
+    // 我們需要手動幫這些「交會轉乘站」建立物理連結（距離為 0，代表同一個車站可以自由換線）
+    const transferStations = ["八堵", "七堵", "竹南", "彰化", "二水", "中洲", "新竹", "瑞芳", "成功"];
+    // 註：因為上面物件 key 相同時會自動融合成同一個節點，
+    // 且各支線/海線的起點站名（如 "竹南"、"二水"）與主線完全相同，
+    // 轉換迴圈會自動把主線的「前/後站」與支線的「下一站」通通連到同一個車站節點上！
+    // 也就是說：二水節點會同時連向「田中(主)」、「林內(主)」以及「源泉(集集線)」，演算法會完美自動轉乘！
+}
+
+// 執行初始化
+initRailwayGraph();
 const STATION_GEO = {
     "基隆": [25.132, 121.740], "三坑": [25.123, 121.741], "八堵": [25.108, 121.727], "七堵": [25.097, 121.714], "百福": [25.077, 121.694], "五堵": [25.065, 121.668],
     "汐止": [25.064, 121.652], "汐科": [25.061, 121.637], "南港": [25.052, 121.607], "松山": [25.049, 121.578], "臺北": [25.047, 121.517],
@@ -428,30 +474,194 @@ function calculateAllRoutes() {
     }
 }
 
-function getStationLines(stationName) { let lines = []; Object.keys(STATION_DB).forEach(line => { if (STATION_DB[line][stationName] !== undefined) lines.push(line); }); return lines; }
-function getDirectDist(line, s1, s2) { return Math.abs(STATION_DB[line][s1] - STATION_DB[line][s2]); }
-function getRouteNodesList(line, s1, s2) {
-    const lineStations = STATION_DB[line];
-    const s1Dist = lineStations[s1], s2Dist = lineStations[s2];
-    const minDist = Math.min(s1Dist, s2Dist), maxDist = Math.max(s1Dist, s2Dist);
-    let inRange = Object.keys(lineStations).filter(s => lineStations[s] >= minDist && lineStations[s] <= maxDist);
-    inRange.sort((a, b) => lineStations[a] - lineStations[b]);
-    if (s1Dist > s2Dist) inRange.reverse();
-    return inRange;
-}
-
-function getSmartRoute(start, end) {
-    if (start === end) return { dist: 0, path: start, nodes: [start] };
-    const sLines = getStationLines(start), eLines = getStationLines(end);
-    for (let sL of sLines) {
-        if (eLines.includes(sL)) { return { dist: getDirectDist(sL, start, end), path: `${start} → ${end}`, nodes: getRouteNodesList(sL, start, end) }; }
-    }
-    
-    // 防呆兜底：如果資料庫查不到直達（如跨幹線），回傳兩站點直線，距離暫估
-    return { dist: 50, path: `${start} 至 ${end} (跨線路暫估)`, nodes: [start, end] };
-}
-
 function getStationLatLng(stationName) {
     if (STATION_GEO[stationName]) return STATION_GEO[stationName];
+    return null;
+}
+
+// =================================================================
+// 🚀 替換後的全新 calculateAllRoutes (支援轉乘、包含地圖防錯與軌跡連線)
+// =================================================================
+function calculateAllRoutes() {
+    Object.keys(mapLayers).forEach(key => { mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); });
+    mapLayers = {};
+    const rows = document.querySelectorAll("#excelBody tr");
+    let totalDist = 0, totalCarbon = 0, validCount = 0, index = 0;
+
+    rows.forEach(row => {
+        const rowId = row.id;
+        const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
+        const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
+        const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
+        const colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length];
+        index++;
+        
+        if (startName === endName) return; 
+        
+        // 💡 呼叫全新的 Dijkstra 自動轉乘最佳路徑演算法
+        const routeResult = findShortestPath(startName, endName);
+        
+        if (routeResult && routeResult.distance > 0) {
+            const CARBON_FACTOR = 0.048;
+            const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
+            
+            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
+            document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
+            
+            // 將完整路徑節點記錄到 store 中（點擊該列時可以顯示完整經過車站）
+            rowDataStore[rowId] = { 
+                dist: routeResult.distance, 
+                carbon: trainCarbon, 
+                path: routeResult.path.join(' → '), 
+                nodes: routeResult.path 
+            };
+            
+            totalDist += routeResult.distance; 
+            totalCarbon += trainCarbon; 
+            validCount++;
+            
+            mapLayers[rowId] = [];
+            const currentRouteLatLngs = [];
+            
+            // 遍歷所有經過的轉乘/直達節點
+            routeResult.path.forEach((node, nIdx) => {
+                const pos = getStationLatLng(node);
+                if (pos) {
+                    currentRouteLatLngs.push(pos);
+                    
+                    // 只有起點和終點才畫圓點標記
+                    if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
+                        const isStart = (nIdx === 0);
+                        const marker = L.circleMarker(pos, { 
+                            radius: isStart ? 6 : 5, 
+                            fillColor: isStart ? '#ffffff' : colorHex, 
+                            color: colorHex, 
+                            weight: 2, 
+                            fillOpacity: 1.0 
+                        }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart?'起點':'終點'}]</b><br>車站：${node}`);
+                        
+                        mapLayers[rowId].push(marker);
+                    }
+                } else {
+                    console.warn(`車站 ${node} 缺少座標，已忽略其地圖標記。`);
+                }
+            });
+
+            // 只要收集到有效的座標軌跡，就把線條沿著鐵路畫出來
+            if (currentRouteLatLngs.length >= 2) {
+                const polylineBack = L.polyline(currentRouteLatLngs, { 
+                    color: colorHex, 
+                    weight: 5, 
+                    opacity: 0.7, 
+                    customType: 'back' 
+                }).addTo(mapInstance);
+
+                const polylineFront = L.polyline(currentRouteLatLngs, { 
+                    color: '#ffffff', 
+                    weight: 2, 
+                    dashArray: '5, 8', 
+                    opacity: 0.9, 
+                    customType: 'front' 
+                }).addTo(mapInstance);
+
+                mapLayers[rowId].push(polylineBack, polylineFront);
+            }
+        }
+    });
+
+    const summaryBox = document.getElementById("summaryResult");
+    if (validCount > 0) {
+        summaryBox.style.display = "block";
+        document.getElementById("totalCount").innerText = validCount;
+        document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
+        document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
+    } else {
+        summaryBox.style.display = "none";
+    }
+}
+
+// =================================================================
+// 💡 請把以下這段「圖形初始化與網路尋路演算法」直接貼在最底端
+// =================================================================
+const RAILWAY_GRAPH = {};
+
+function initRailwayGraph() {
+    for (let lineName in STATION_DB) {
+        const line = STATION_DB[lineName];
+        const stationsList = Object.keys(line); 
+        
+        for (let i = 0; i < stationsList.length; i++) {
+            const currentStation = stationsList[i];
+            const currentDist = line[currentStation];
+            
+            if (!RAILWAY_GRAPH[currentStation]) {
+                RAILWAY_GRAPH[currentStation] = {};
+            }
+            
+            if (i < stationsList.length - 1) {
+                const nextStation = stationsList[i + 1];
+                const nextDist = line[nextStation];
+                const distance = Math.abs(nextDist - currentDist); 
+                
+                RAILWAY_GRAPH[currentStation][nextStation] = distance;
+                
+                if (!RAILWAY_GRAPH[nextStation]) {
+                    RAILWAY_GRAPH[nextStation] = {};
+                }
+                RAILWAY_GRAPH[nextStation][currentStation] = distance;
+            }
+        }
+    }
+}
+initRailwayGraph(); // 立即建立網狀圖結構
+
+function findShortestPath(start, end) {
+    if (start === end) return { distance: 0, path: [start] };
+    if (!(start in RAILWAY_GRAPH) || !(end in RAILWAY_GRAPH)) return null;
+
+    const distances = {};
+    const prev = {};
+    const queue = new Set();
+
+    for (let station in RAILWAY_GRAPH) {
+        distances[station] = Infinity;
+        prev[station] = null;
+        queue.add(station);
+    }
+
+    distances[start] = 0;
+
+    while (queue.size > 0) {
+        let u = null;
+        for (let vertex of queue) {
+            if (u === null || distances[vertex] < distances[u]) {
+                u = vertex;
+            }
+        }
+
+        if (distances[u] === Infinity) break;
+        if (u === end) {
+            const path = [];
+            let curr = end;
+            while (curr !== null) {
+                path.unshift(curr);
+                curr = prev[curr];
+            }
+            return { distance: parseFloat(distances[end].toFixed(1)), path: path };
+        }
+
+        queue.delete(u);
+
+        const neighbors = RAILWAY_GRAPH[u];
+        for (let neighbor in neighbors) {
+            if (!queue.has(neighbor)) continue;
+            
+            const alt = distances[u] + neighbors[neighbor];
+            if (alt < distances[neighbor]) {
+                distances[neighbor] = alt;
+                prev[neighbor] = u;
+            }
+        }
+    }
     return null;
 }
