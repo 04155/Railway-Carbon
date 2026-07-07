@@ -422,7 +422,6 @@ function calculateAllRoutes() {
         }
     }
 });
-    });
 
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
