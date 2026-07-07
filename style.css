@@ -187,12 +187,12 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .btn-calc:hover { background: #2563eb; }
 
 /* ──────────────────────────────────────────────────────────────
-   【重要】請務必將此段程式碼貼在 style.css 的最底部，以確保能成功覆蓋桌機樣式
+   【手機與行動裝置專用 RWD 樣式】最新的字體同步與版面優化版
    ────────────────────────────────────────────────────────────── */
 @media screen and (max-width: 768px) {
     body {
         padding: 10px !important;
-        padding-bottom: 90px !important; /* 💡 留出 90px 的空間給底部的浮動看板 */
+        padding-bottom: 90px !important; /* 留出空間給底部的浮動看板 */
     }
 
     .main-wrapper {
@@ -209,7 +209,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
     .right-panel {
         height: 400px !important;         /* 給予地圖適當的固定高度 */
-        order: 1 !important;  
+        order: 1 !important;              /* 讓地圖移到表格下方 */
         margin-top: 10px;
     }
 
@@ -218,33 +218,27 @@ h2 { margin-bottom: 20px; color: #2d3436; }
         min-height: 400px !important;
     }
 
-    /* 調整按鈕在手機上的點擊範圍與視覺 */
-    .btn-action {
-        padding: 12px 16px !important;
-        font-size: 14px !important;
+    /* 💡 統一調整所有按鈕（包含匯出按鈕）在手機上的尺寸與字體大小 */
+    .btn-action,
+    button[onclick="exportToExcel()"] {
+        font-size: 15px !important;        /* 💡 確保手機版雙方字體大小絕對相等 */
+        padding: 12px 16px !important;     /* 統一按鈕內邊距，厚度相同 */
         margin-bottom: 8px !important;
-        width: 100% !important;
+        width: 100% !important;            /* 手機版皆撐滿單行，排列更整齊 */
         box-sizing: border-box !important;
         display: block !important;
+        text-align: center !important;
     }
     
     .btn-calc {
-        margin-left: 0 !important;
-    }
-    
-    button[onclick="exportToExcel()"] {
-        width: 100% !important;
-        margin-left: 0 !important;
-        margin-bottom: 8px !important;
-        padding: 12px 16px !important;
-        display: block !important;
+        margin-left: 0 !important;         /* 清除桌機版的左邊距 */
     }
 
     /* 下拉選單與表格在手機版的微調 */
     .table-responsive {
         padding-bottom: 250px !important;
         margin-bottom: -250px !important;
-        overflow-x: auto !important;       /* 表格過寬時允許左右滑動，不擠壓版面 */
+        overflow-x: auto !important;       /* 表格過寬時允許左右滑動 */
     }
 
     .dropdown-box {
@@ -256,21 +250,20 @@ h2 { margin-bottom: 20px; color: #2d3436; }
         padding: 8px 5px !important;
     }
 
+    /* 手機版專屬浮動總計看板 */
     .summary-box {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        z-index: 2000 !important; /* 確保浮在最上層，不被地圖或表格遮擋 */
+        z-index: 2000 !important;
         margin: 0 !important;
         border-left: none !important;
-        border-top: 4px solid #10b981 !important; /* 綠色環保視覺頂邊 */
-        background-color: rgba(255, 255, 255, 0.95) !important; /* 微透明白底 */
-        backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+        border-top: 4px solid #10b981 !important;
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
         box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1) !important;
         padding: 12px 20px !important;
-        
-        /* 讓原本上下排列的文字，在手機底部變成橫向並排 */
         display: flex !important;
         justify-content: space-around !important;
         align-items: center !important;
@@ -283,7 +276,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     }
 
     .summary-box span {
-        display: block !important; /* 讓數據和標題在橫排中上下分行，更易讀 */
+        display: block !important;
         font-size: 18px !important;
         font-weight: bold !important;
     }

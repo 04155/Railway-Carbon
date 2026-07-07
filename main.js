@@ -70,10 +70,26 @@ const RAILWAY_GRAPH = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("JS 載入成功");
-    mapInstance = L.map('map').setView([23.8, 121.0], 7.5);
+    
+    // 💡 1. 智慧偵測是否為手機板（螢幕寬度小於或等於 768px）
+    const isMobile = window.innerWidth <= 768;
+
+    // 💡 2. 根據裝置調整地圖手勢設定
+    mapInstance = L.map('map', {
+        dragging: !isMobile,         // 手機版禁用單指拖拽，避免無法滑動網頁
+        scrollWheelZoom: false,      // 禁用滑鼠滾輪縮放（對桌機、筆電觸控板也友善）
+        tap: !isMobile,              // 防止手機點擊與 Leaflet 的 click 事件衝突
+        touchZoom: isMobile ? 'center' : true // 手機版若要縮放，限制以中心點縮放，比較穩定
+    }).setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5); // 手機版視野稍微往南移、縮小一點點，台灣地圖顯示更完美
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(mapInstance);
+    
+    // 如果是手機版，另外加入雙指縮放提示（選配，可以防止使用者以為地圖壞掉）
+    if (isMobile && mapInstance.gestureHandling) {
+        // 若未來有引入 Leaflet.GestureHandling 外掛才需要，目前這樣設定就能完美防誤觸
+    }
 
     initRailwayGraph(); // 初始化網狀尋路圖
     addNewRow("臺北", "高雄", 2);
