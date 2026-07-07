@@ -167,6 +167,9 @@ function openImportModal(rows) {
         calculateAllRoutes();
         closeImportModal();
     };
+    const modal = document.getElementById("importModal");
+    modal.style.display = "flex"; // 強制指定為 flex，確保它顯示出來
+    console.log("視窗應該已經被設為 flex 了");
 }
 
 function closeImportModal() {
