@@ -422,49 +422,65 @@ function calculateAllRoutes() {
         }
     }
 });
-// 💡 安全防錯版：清除所有行程的函數
+// 💡 100% 強行清空與畫面隔離版
 function clearAllRows() {
     // 1. 彈出確認視窗，防止誤觸
     if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
         return;
     }
 
-    // 2. 清空前端 HTML 表格內容
+    // 2. 徹底清空前端 HTML 表格內容
     const excelBody = document.getElementById('excelBody');
     if (excelBody) {
         excelBody.innerHTML = '';
     }
 
-    // 3. 安全清除地圖上所有畫好的路線與圓點標記
+    // 3. 全面且安全地移除地圖上的路線與標記
+    // 檢查是否有 Leaflet 地圖實例，並且手動遍歷清除
     if (typeof mapLayers !== 'undefined' && mapLayers) {
         for (let rowId in mapLayers) {
             if (Array.isArray(mapLayers[rowId])) {
                 mapLayers[rowId].forEach(layer => {
-                    if (layer && mapInstance) {
-                        mapInstance.removeLayer(layer);
+                    // 加上層層防禦檢查，確保 layer 存在且地圖上有這個圖層才做移除
+                    if (layer && typeof mapInstance !== 'undefined' && mapInstance && mapInstance.hasLayer(layer)) {
+                        try {
+                            mapInstance.removeLayer(layer);
+                        } catch (e) {
+                            console.log("地圖圖層移除輕微跳過:", e);
+                        }
                     }
                 });
             }
         }
     }
     
-    // 4. 重設所有全域資料容器
+    // 直接用最暴力但最乾淨的方法：叫 Leaflet 尋找地圖上所有的 Polyline 和 CircleMarker 並清除
+    if (typeof mapInstance !== 'undefined' && mapInstance) {
+        mapInstance.eachLayer(function (layer) {
+            // 不要刪除底圖瓷磚 (TileLayer) 即可，其餘繪製的鐵軌、圓點都清除
+            if (layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+                mapInstance.removeLayer(layer);
+            }
+        });
+    }
+    
+    // 4. 重設所有相關的全域變數與資料暫存容器
     mapLayers = {};
     if (typeof rowDataStore !== 'undefined') rowDataStore = {};
+    if (typeof allRouteLatLngs !== 'undefined') allRouteLatLngs = [];
     
-    // 5. 隱藏詳情看板
+    // 5. 隱藏路線詳情看板
     const pathInfoBox = document.getElementById('pathInfoBox');
-    if (pathInfoBox) pathInfoBox.style.display = 'none';
-    
-    // 6. 還原地圖視野
-    const isMobile = window.innerWidth <= 768;
-    if (mapInstance) {
-        mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+    if (pathInfoBox) {
+        pathInfoBox.style.display = 'none';
+        const activePathText = document.getElementById('activePathText');
+        if (activePathText) activePathText.innerText = '-';
     }
+    
+    // 6. 強制重設累加用的顏色 index 指標
+    if (typeof index !== 'undefined') index = 0;
 
-    // 7. 💡 關鍵修正：歸零總計看板數據並重新整理畫面
-    // 如果直接呼叫 calculateAllRoutes() 依然沒反應，代表裡面對空表格會直接中斷
-    // 我們在這裡手動強制把數字洗回 0，並隱藏總計區塊
+    // 7. 💡 關鍵：完全手動強行洗掉總計數據，繞過原計算函數的報錯痛點
     const totalCount = document.getElementById('totalCount');
     const totalDistance = document.getElementById('totalDistance');
     const totalCarbon = document.getElementById('totalCarbon');
@@ -474,26 +490,26 @@ function clearAllRows() {
     if (totalDistance) totalDistance.innerText = '0';
     if (totalCarbon) totalCarbon.innerText = '0';
     
-    // 根據你的 RWD 設定：手機版維持顯示浮動條（但數據皆為0），桌機版隱藏
+    // 偵測裝置以調整看板顯示狀態
+    const isMobile = window.innerWidth <= 768;
     if (summaryResult) {
         if (isMobile) {
-            summaryResult.style.display = 'flex'; // 手機版維持結帳條狀態
+            summaryResult.style.display = 'flex'; // 手機版維持固定底部的結帳條 (數值為0)
         } else {
-            summaryResult.style.display = 'none'; // 桌機版隱藏
+            summaryResult.style.display = 'none'; // 桌機版無資料則隱藏
         }
     }
 
-    // 8. 嘗試跑一次原本的計算邏輯（確保同步更新內部變數如 totalDist = 0）
-    if (typeof calculateAllRoutes === 'function') {
+    // 8. 還原地圖視野回台灣全圖
+    if (typeof mapInstance !== 'undefined' && mapInstance) {
         try {
-            calculateAllRoutes();
-        } catch (e) {
-            console.log("計算重設正常中斷（表格已空）");
+            mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+        } catch(e) {
+            console.log("地圖視野重設跳過");
         }
     }
-    
-    // 重設累加用的 index，讓下一次新增行程可以重新從第一個顏色開始抽
-    if (typeof index !== 'undefined') index = 0;
+
+    console.log("=== 行程與地圖已強制一鍵清空完畢 ===");
 }
 
     const summaryBox = document.getElementById("summaryResult");
