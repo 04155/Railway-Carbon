@@ -16,10 +16,11 @@
         <h2>台鐵碳排批次規劃表</h2>
         <div class="action-btn-group">
             <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
-    <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
-    <button class="btn-action btn-csv" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV,xlsx,xls</button>
-    <input type="file" id="csvFileInput" accept=".csv,.xlsx, .xls" style="display: none;" onchange="importCSV(this)">
-    <button class="btn-action btn-export" onclick="exportToExcel()">📤 匯出 Excel</button>
+            <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
+            <button class="btn-action btn-csv" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV,xlsx,xls</button>
+            <input type="file" id="csvFileInput" accept=".csv,.xlsx, .xls" style="display: none;" onchange="importCSV(this)">
+            <button class="btn-action btn-export" onclick="exportToExcel()">📤 匯出 Excel</button>
+            <button class="btn-action btn-clear-all" onclick="clearAllRows()">🗑️ 全部刪除</button>
         </div>
 
         <div class="table-responsive">

@@ -422,6 +422,39 @@ function calculateAllRoutes() {
         }
     }
 });
+// 💡 新增：清除所有行程的函數
+function clearAllRows() {
+    // 1. 防呆機制：避免使用者誤觸导致苦心設定的資料消失
+    if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
+        return;
+    }
+
+    // 2. 清空前端 HTML 表格內容
+    const excelBody = document.getElementById('excelBody');
+    if (excelBody) excelBody.innerHTML = '';
+
+    // 3. 清除地圖上所有畫好的路線、圓點標記 (Markers)
+    for (let rowId in mapLayers) {
+        if (mapLayers[rowId]) {
+            mapLayers[rowId].forEach(layer => mapInstance.removeLayer(layer));
+        }
+    }
+    
+    // 4. 重設所有全域資料儲存容器與狀態
+    mapLayers = {};
+    rowDataStore = {};
+    
+    // 5. 隱藏詳情看板，並將地圖視野還原回台灣全圖中心點
+    const pathInfoBox = document.getElementById('pathInfoBox');
+    if (pathInfoBox) pathInfoBox.style.display = 'none';
+    
+    // 智慧還原視野（偵測手機版或桌機版）
+    const isMobile = window.innerWidth <= 768;
+    mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+
+    // 6. 重新觸發計算（這會將總計歸零，並把底部看板設定為正確狀態）
+    calculateAllRoutes();
+}
 
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {

@@ -100,6 +100,14 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .btn-action:active {
     transform: translateY(1px);
 }
+/* ─── 💡 全部刪除按鈕的專屬外觀與 Hover 效果 ─── */
+.btn-clear-all { 
+    background: #dc2626; /* 警示紅 */
+    color: white; 
+}
+.btn-clear-all:hover { 
+    background: #b91c1c; 
+}
 
 /* =========================================
    style.css - Part 2: Table and Custom Select Styles
