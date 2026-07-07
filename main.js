@@ -141,39 +141,33 @@ function importCSV(input) {
     input.value = '';
 }
 // 開啟預覽視窗
+// 這個函數用來負責顯示那個預覽視窗
 function openImportModal(rows) {
-    console.log("測試：視窗函數有被呼叫到！");
+    console.log("視窗啟動中..."); // 幫我看看按匯入時，F12 主控台有沒有出現這行字
     const previewBody = document.getElementById("importPreviewBody");
     previewBody.innerHTML = ""; 
 
-    // 假設 CSV 第一列是標題(起點,終點,人數)，我們從第二列開始取
-    // 若你的檔案沒有標題，請把 slice(1) 拿掉
-    const dataRows = rows.length > 1 && (rows[0][0] === '起點' || isNaN(parseInt(rows[0][2]))) ? rows.slice(1) : rows;
+    // 簡單過濾掉標題列
+    const dataRows = (rows[0][0] === '起點' || isNaN(parseInt(rows[0][2]))) ? rows.slice(1) : rows;
 
-    dataRows.forEach((row, index) => {
-        if (row.length < 2) return;
+    dataRows.forEach(row => {
+        if (!row[0] || !row[1]) return; // 過濾空行
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${row[0]}</td><td>${row[1]}</td><td>${row[2] || 1}</td>`;
         previewBody.appendChild(tr);
     });
 
-    // 顯示視窗 (配合 CSS 的 transition，如果有的話)
-    const modal = document.getElementById("importModal");
-    modal.style.display = "flex";
+    document.getElementById("importModal").style.display = "flex";
 
-    // 綁定「確認匯入」按鈕邏輯
     document.getElementById("confirmImportBtn").onclick = () => {
         dataRows.forEach(row => {
-            if (row.length >= 2) {
-                addNewRow(row[0], row[1], row[2] || 1);
-            }
+            if (row[0] && row[1]) addNewRow(row[0], row[1], row[2] || 1);
         });
-        calculateAllRoutes(); // 匯入後自動計算
+        calculateAllRoutes();
         closeImportModal();
     };
 }
 
-// 關閉視窗
 function closeImportModal() {
     document.getElementById("importModal").style.display = "none";
 }
