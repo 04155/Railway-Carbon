@@ -343,6 +343,10 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
             renderList("");
             filterInput.value = "";
             setTimeout(() => filterInput.focus(), 50);
+        }else {
+            // 如果原本就是打開的，再次點擊時，確保 container 移除 open
+            container.classList.remove("open");
+            dropdown.classList.remove("is-fixed");
         }
     });
 
@@ -377,7 +381,9 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
 
 function closeAllCombos() {
     document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
-    document.querySelectorAll('.dropdown-box').forEach(el => el.classList.remove('is-fixed'));
+    document.querySelectorAll(".dropdown-box").forEach(dropdown => {
+        dropdown.classList.remove("is-fixed");
+    });
 }
 document.addEventListener("click", closeAllCombos);
 
