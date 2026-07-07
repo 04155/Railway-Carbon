@@ -73,7 +73,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .color-badge { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
 
 /* 下拉選單容器 */
-.custom-select-container { position: relative; cursor: pointer; user-select: none; }
+.custom-select-container { position: relative; cursor: pointer; user-select: none; overflow: visible; }
 .select-trigger { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; min-width: 100px;display: flex; }
 .select-trigger:hover { border-color: #3b82f6; }
 
