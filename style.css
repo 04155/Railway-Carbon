@@ -116,8 +116,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 /* ─── 💡 讓表格區塊支援橫向滾動 ─── */
 .table-responsive {
     width: 100%;                  /* 寬度撐滿父容器 */
-    overflow-x: auto;             /* 關鍵：當內容超出寬度時，自動顯示橫向滾動軸 */
-    overflow-y: visible;          /* 確保下拉選單跳出來時不會被上下裁切 */
+    overflow-y: visible !important;          /* 確保下拉選單跳出來時不會被上下裁切 */
     margin-bottom: 20px;
     border: 1px solid #e2e8f0;    /* 幫表格加一個淡淡的邊框，滾動時視覺更完整 */
     border-radius: 8px;
@@ -305,9 +304,24 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
     /* 下拉選單與表格在手機版的微調 */
     .table-responsive {
-        padding-bottom: 150px !important; /* 留下一點緩衝空間給起終點下拉選單即可 */
-        margin-bottom: 0 !important;
-        overflow-x: auto !important;       /* 確保手機版也絕對支援橫向滾動 */
+        padding-bottom: 0px !important;    /* 預設無空白，靠 JS 動態撐開 */
+        margin-bottom: 10px !important;
+        overflow-x: auto !important;       /* 手機版才允許橫向滾動 */
+        overflow-y: visible !important;    /* 允許垂直溢出配合 JS */
+        border-radius: 8px;
+        transition: padding-bottom 0.2s ease;
+    }
+
+    /* 手機版為了不擠壓欄位，給它一個最低寬度來觸發滾動軸 */
+    .table-responsive table {
+        min-width: 580px !important;
+    }
+
+    /* 微調手機版格子間距，讓排版更緊湊 */
+    .table-responsive th, 
+    .table-responsive td {
+        padding: 6px 4px !important;
+        font-size: 14px !important;
     }
 
     .dropdown-box {
