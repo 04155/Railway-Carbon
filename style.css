@@ -113,38 +113,13 @@ h2 { margin-bottom: 20px; color: #2d3436; }
    style.css - Part 2: Table and Custom Select Styles
    ========================================= */
 
-/* ─── 💡 讓表格區塊支援橫向滾動 ─── */
-.table-responsive {
-    width: 100%;                  /* 寬度撐滿父容器 */
-    overflow-x: auto;             /* 關鍵：當內容超出寬度時，自動顯示橫向滾動軸 */
-    overflow-y: visible;          /* 確保下拉選單跳出來時不會被上下裁切 */
-    margin-bottom: 20px;
-    border: 1px solid #e2e8f0;    /* 幫表格加一個淡淡的邊框，滾動時視覺更完整 */
-    border-radius: 8px;
-    background: #ffffff;
-}
-
-/* ─── 💡 確保表格本身不會被無限壓縮，訂出最小寬度 ─── */
-.table-responsive table {
-    width: 100%;
-    min-width: 650px;             /* 關鍵：限制表格最低寬度，低於這個寬度就會觸發橫向滾動軸 */
-    border-collapse: collapse;
-}
-
-/* 可選：美化橫向滾動軸，讓它看起來細緻一點，不會黑黑粗粗的 */
-.table-responsive::-webkit-scrollbar {
-    height: 6px;                  /* 橫向滾動軸的高度 */
-}
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f5f9;          /* 滾動軌道顏色 */
-    border-radius: 4px;
-}
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #cbd5e1;          /* 滾動拉條顏色 */
-    border-radius: 4px;
-}
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;          /* 滑鼠滑過時加深 */
+/* 解除表格容器的縱向裁剪限制 */
+.table-responsive { 
+    width: 100%; 
+    overflow-x: auto !important;     /* 保持橫向滾動，可以滑動看人數或刪除按鈕 */
+    overflow-y: visible !important;  /* 關鍵：縱向改成看得見，讓絕對定位選單穿透底線往下長 */
+    padding-bottom: 220px !important; /* 核心：在表格最底部推開隱形空間，留給下拉選單伸展 */
+    margin-bottom: -220px !important;  /* 補償排版，不影響下方總計區塊的位置 */
 }
 
 .excel-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -305,9 +280,9 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
     /* 下拉選單與表格在手機版的微調 */
     .table-responsive {
-        padding-bottom: 150px !important; /* 留下一點緩衝空間給起終點下拉選單即可 */
-        margin-bottom: 0 !important;
-        overflow-x: auto !important;       /* 確保手機版也絕對支援橫向滾動 */
+        padding-bottom: 250px !important;
+        margin-bottom: -250px !important;
+        overflow-x: auto !important;       /* 表格過寬時允許左右滑動 */
     }
 
     .dropdown-box {
