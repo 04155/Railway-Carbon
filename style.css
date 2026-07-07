@@ -208,7 +208,8 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
     .right-panel {
         height: 400px !important;         /* 給予地圖適當的固定高度 */
-        order: -1 !important;             /* 讓地圖在手機版排在最上方 */
+        order: 1 !important;  
+        margin-top: 10px;
     }
 
     #map {
