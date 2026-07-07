@@ -94,17 +94,19 @@ function importCSV(input) {
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
-    const reader = new FileReader();        // 建立檔案讀取器
+    const reader = new FileReader();
 
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });    // SheetJS 讀取二進位資料
-                const firstSheetName = workbook.SheetNames[0];          // 取第一個工作表
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });    // 轉成二維陣列
-                processImportedRows(rows);  // 處理資料列
+                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                // --- 修改處：不直接 process，改為開啟預覽 ---
+                openImportModal(rows);
             } catch (err) {
                 console.error(err);
                 alert('讀取 Excel 檔案失敗，請檢查檔案格式是否正確。');
@@ -115,19 +117,18 @@ function importCSV(input) {
         reader.onload = function(e) {
             try {
                 const buffer = e.target.result;
-                let decoder = new TextDecoder('utf-8'); //解碼
+                let decoder = new TextDecoder('utf-8');
                 let text = decoder.decode(buffer);
-                // 如果文字內含有特殊亂碼符號，嘗試改用 Big5 (台灣常見舊式 CSV 編碼) 重新讀取
-                if (text.includes('')) {
+                if (text.includes('\ufffd')) { // 修正：偵測亂碼的正確寫法
                     decoder = new TextDecoder('big5');
                     text = decoder.decode(buffer);
                 }
-                // 將純文字依行(換行符)與列(逗號)切開為二維陣列
                 const rows = text.split(/\r?\n/)
                                  .filter(row => row.trim() !== '')
                                  .map(row => row.split(','));
                                  
-                processImportedRows(rows);
+                // --- 修改處：不直接 process，改為開啟預覽 ---
+                openImportModal(rows);
             } catch (err) {
                 console.error(err);
                 alert('讀取 CSV 檔案失敗。');
@@ -137,7 +138,43 @@ function importCSV(input) {
     } else {
         alert('不支援的檔案格式！請上傳 .csv 或 .xlsx 檔案。');
     }
-    input.value = '';   // 清空 input 的 value，以便下次可以重複上傳同檔名檔案
+    input.value = '';
+}
+// 開啟預覽視窗
+function openImportModal(rows) {
+    const previewBody = document.getElementById("importPreviewBody");
+    previewBody.innerHTML = ""; 
+
+    // 假設 CSV 第一列是標題(起點,終點,人數)，我們從第二列開始取
+    // 若你的檔案沒有標題，請把 slice(1) 拿掉
+    const dataRows = rows.length > 1 && (rows[0][0] === '起點' || isNaN(parseInt(rows[0][2]))) ? rows.slice(1) : rows;
+
+    dataRows.forEach((row, index) => {
+        if (row.length < 2) return;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row[0]}</td><td>${row[1]}</td><td>${row[2] || 1}</td>`;
+        previewBody.appendChild(tr);
+    });
+
+    // 顯示視窗 (配合 CSS 的 transition，如果有的話)
+    const modal = document.getElementById("importModal");
+    modal.style.display = "flex";
+
+    // 綁定「確認匯入」按鈕邏輯
+    document.getElementById("confirmImportBtn").onclick = () => {
+        dataRows.forEach(row => {
+            if (row.length >= 2) {
+                addNewRow(row[0], row[1], row[2] || 1);
+            }
+        });
+        calculateAllRoutes(); // 匯入後自動計算
+        closeImportModal();
+    };
+}
+
+// 關閉視窗
+function closeImportModal() {
+    document.getElementById("importModal").style.display = "none";
 }
 // 處理並過濾匯入後的二維陣列資料
 function processImportedRows(rows) {

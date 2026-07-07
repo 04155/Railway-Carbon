@@ -42,6 +42,41 @@ body {
 
 h2 { margin-bottom: 24px; color: #2d3436; }
 
+/* 彈出視窗背景遮罩 */
+.modal-overlay {
+    display: none; /* 預設隱藏 */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+.modal-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+/* 彈出視窗內容區塊 */
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 #map {
     flex-grow: 1;
     width: 100%;

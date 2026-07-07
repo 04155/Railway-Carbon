@@ -63,6 +63,29 @@
 <!-- 引入 main.js -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="main.js"></script>
-
+<!-- 預覽視窗 -->
+<div id="importModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>匯入資料預覽</h3>
+        <p>請檢查以下資料是否正確，確認後再匯入：</p>
+        <div class="table-responsive">
+            <table class="excel-table">
+                <thead>
+                    <tr>
+                        <th>起點</th>
+                        <th>終點</th>
+                        <th>人數</th>
+                    </tr>
+                </thead>
+                <tbody id="importPreviewBody">
+                    </tbody>
+            </table>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-action btn-clear-all" onclick="closeImportModal()">取消</button>
+            <button class="btn-action btn-add" id="confirmImportBtn">確認匯入</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
