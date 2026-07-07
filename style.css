@@ -53,24 +53,44 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     z-index: 1;
 }
 
-.btn-action {
-    padding: 10px 15px;
+/* ─── 【重要修正】統一所有功能按鈕的基礎樣式 (桌機版) ─── */
+.btn-action, 
+button[onclick="exportToExcel()"] {
+    display: inline-block;
+    padding: 10px 20px !important;    /* 強制上下與左右內邊距一致，按鈕高度完全相同 */
+    font-size: 14px !important;       /* 💡 核心：強制桌機版字體大小完全對齊 */
+    font-weight: bold;
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s;
+    transition: background 0.2s, transform 0.1s, filter 0.2s;
+    font-family: inherit;             /* 確保字體家族統一 */
+    vertical-align: middle;
+    box-sizing: border-box;
 }
 
+/* ─── 獨立管理按鈕的顏色與間距 ─── */
 .btn-add { background: #059669; color: white; margin-bottom: 15px; }
-.btn-add:hover { background: #047857; }
+.btn-calc { background: #3b82f6; color: white; margin-left: 10px; }
+
+/* ─── 按鈕滑過與點擊的精緻微動效 (包含匯出按鈕) ─── */
+.btn-action:hover,
+button[onclick="exportToExcel()"]:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.9);          /* 智慧降低亮度，滑過時按鈕自動變深 */
+}
+
+.btn-action:active,
+button[onclick="exportToExcel()"]:active {
+    transform: translateY(1px);
+}
 
 
 /* =========================================
    style.css - Part 2: Table and Custom Select Styles
    ========================================= */
 
-/* ─── 【關鍵修正 1】解除表格容器的縱向裁剪限制 ─── */
+/* 解除表格容器的縱向裁剪限制 */
 .table-responsive { 
     width: 100%; 
     overflow-x: auto !important;     /* 保持橫向滾動，可以滑動看人數或刪除按鈕 */
@@ -104,7 +124,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     border-color: #3b82f6; 
 }
 
-/* ─── 【關鍵修正 2】下拉選單本體：預設隱藏，維持絕對定位，恢復漂亮外觀 ─── */
+/* 下拉選單本體 */
 .dropdown-box { 
     display: none; 
     position: absolute; 
@@ -117,11 +137,9 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     z-index: 2500; 
     box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
     box-sizing: border-box;
-
-    /* 修正佈局：確保寬度足夠且元件垂直排列 */
     flex-direction: column; 
-    padding: 8px; /* 恢復原本的內邊距，選單才不會變窄變醜 */
-    min-width: 150px; /* 給予一個最小寬度，防止選單寬度被輸入框限死而變醜擠壓 */
+    padding: 8px; 
+    min-width: 150px; 
 }
 
 /* 只有點開時，才切換為 flex 排版顯示出來 */
@@ -129,7 +147,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     display: flex; 
 }
 
-/* ─── 美化內部的搜尋框 (filter-input) 與清單 (station-list) ─── */
+/* 搜尋框與清單 */
 .dropdown-box .filter-input {
     width: 100% !important; 
     box-sizing: border-box !important;
@@ -153,12 +171,12 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     overflow-y: auto !important;
 }
 
-/* ─── 美化清單項目 (station-item) ─── */
+/* 美化清單項目 */
 .dropdown-box .station-item {
     padding: 8px 12px !important;
     cursor: pointer !important;
     text-align: left !important; 
-    white-space: nowrap !important; /* 確保站名文字不會自己斷行變直書 */
+    white-space: nowrap !important; 
     background: transparent;
     font-weight: normal;
 }
@@ -178,17 +196,15 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .btn-del { background: #ef4444; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;}
 .btn-del:hover { background: #dc2626; }
 
-/* 總結區塊 */
+/* 總結區塊與輔助盒 */
 .summary-box { margin-top: 20px; padding: 15px; background: #f8fafc; border-left: 4px solid #3b82f6; }
 .info-box { margin-top: 20px; padding: 15px; background: #eff6ff; border-radius: 8px; }
 .active-row { background-color: #fef3c7 !important; }
 
-.btn-calc { background: #3b82f6; color: white; margin-left: 10px; }
-.btn-calc:hover { background: #2563eb; }
 
-/* ──────────────────────────────────────────────────────────────
-   【手機與行動裝置專用 RWD 樣式】最新的字體同步與版面優化版
-   ────────────────────────────────────────────────────────────── */
+/* ==============================================================
+   【手機與行動裝置專用 RWD 樣式】
+   ============================================================== */
 @media screen and (max-width: 768px) {
     body {
         padding: 10px !important;
@@ -221,7 +237,7 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     /* 💡 統一調整所有按鈕（包含匯出按鈕）在手機上的尺寸與字體大小 */
     .btn-action,
     button[onclick="exportToExcel()"] {
-        font-size: 15px !important;        /* 💡 確保手機版雙方字體大小絕對相等 */
+        font-size: 15px !important;        /* 確保手機版雙方字體大小絕對相等 */
         padding: 12px 16px !important;     /* 統一按鈕內邊距，厚度相同 */
         margin-bottom: 8px !important;
         width: 100% !important;            /* 手機版皆撐滿單行，排列更整齊 */
