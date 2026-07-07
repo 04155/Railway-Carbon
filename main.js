@@ -422,38 +422,78 @@ function calculateAllRoutes() {
         }
     }
 });
-// 💡 新增：清除所有行程的函數
+// 💡 安全防錯版：清除所有行程的函數
 function clearAllRows() {
-    // 1. 防呆機制：避免使用者誤觸导致苦心設定的資料消失
+    // 1. 彈出確認視窗，防止誤觸
     if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
         return;
     }
 
     // 2. 清空前端 HTML 表格內容
     const excelBody = document.getElementById('excelBody');
-    if (excelBody) excelBody.innerHTML = '';
+    if (excelBody) {
+        excelBody.innerHTML = '';
+    }
 
-    // 3. 清除地圖上所有畫好的路線、圓點標記 (Markers)
-    for (let rowId in mapLayers) {
-        if (mapLayers[rowId]) {
-            mapLayers[rowId].forEach(layer => mapInstance.removeLayer(layer));
+    // 3. 安全清除地圖上所有畫好的路線與圓點標記
+    if (typeof mapLayers !== 'undefined' && mapLayers) {
+        for (let rowId in mapLayers) {
+            if (Array.isArray(mapLayers[rowId])) {
+                mapLayers[rowId].forEach(layer => {
+                    if (layer && mapInstance) {
+                        mapInstance.removeLayer(layer);
+                    }
+                });
+            }
         }
     }
     
-    // 4. 重設所有全域資料儲存容器與狀態
+    // 4. 重設所有全域資料容器
     mapLayers = {};
-    rowDataStore = {};
+    if (typeof rowDataStore !== 'undefined') rowDataStore = {};
     
-    // 5. 隱藏詳情看板，並將地圖視野還原回台灣全圖中心點
+    // 5. 隱藏詳情看板
     const pathInfoBox = document.getElementById('pathInfoBox');
     if (pathInfoBox) pathInfoBox.style.display = 'none';
     
-    // 智慧還原視野（偵測手機版或桌機版）
+    // 6. 還原地圖視野
     const isMobile = window.innerWidth <= 768;
-    mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+    if (mapInstance) {
+        mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+    }
 
-    // 6. 重新觸發計算（這會將總計歸零，並把底部看板設定為正確狀態）
-    calculateAllRoutes();
+    // 7. 💡 關鍵修正：歸零總計看板數據並重新整理畫面
+    // 如果直接呼叫 calculateAllRoutes() 依然沒反應，代表裡面對空表格會直接中斷
+    // 我們在這裡手動強制把數字洗回 0，並隱藏總計區塊
+    const totalCount = document.getElementById('totalCount');
+    const totalDistance = document.getElementById('totalDistance');
+    const totalCarbon = document.getElementById('totalCarbon');
+    const summaryResult = document.getElementById('summaryResult');
+
+    if (totalCount) totalCount.innerText = '0';
+    if (totalDistance) totalDistance.innerText = '0';
+    if (totalCarbon) totalCarbon.innerText = '0';
+    
+    // 根據你的 RWD 設定：手機版維持顯示浮動條（但數據皆為0），桌機版隱藏
+    if (summaryResult) {
+        if (isMobile) {
+            summaryResult.style.display = 'flex'; // 手機版維持結帳條狀態
+        } else {
+            summaryResult.style.display = 'none'; // 桌機版隱藏
+        }
+    }
+
+    // 8. 嘗試跑一次原本的計算邏輯（確保同步更新內部變數如 totalDist = 0）
+    if (typeof calculateAllRoutes === 'function') {
+        try {
+            calculateAllRoutes();
+        } catch (e) {
+            console.log("計算重設正常中斷（表格已空）");
+        }
+    }
+    
+    // 重設累加用的 index，讓下一次新增行程可以重新從第一個顏色開始抽
+    if (typeof index !== 'undefined') index = 0;
 }
 
     const summaryBox = document.getElementById("summaryResult");
