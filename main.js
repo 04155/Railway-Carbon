@@ -71,27 +71,20 @@ const RAILWAY_GRAPH = {};
 document.addEventListener('DOMContentLoaded', () => {
     console.log("JS 載入成功");
     
-    // 💡 1. 智慧偵測是否為手機板（螢幕寬度小於或等於 768px）
     const isMobile = window.innerWidth <= 768;
 
-    // 💡 2. 根據裝置調整地圖手勢設定
     mapInstance = L.map('map', {
-        dragging: !isMobile,         // 手機版禁用單指拖拽，避免無法滑動網頁
-        scrollWheelZoom: false,      // 禁用滑鼠滾輪縮放（對桌機、筆電觸控板也友善）
-        tap: !isMobile,              // 防止手機點擊與 Leaflet 的 click 事件衝突
-        touchZoom: isMobile ? 'center' : true // 手機版若要縮放，限制以中心點縮放，比較穩定
-    }).setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5); // 手機版視野稍微往南移、縮小一點點，台灣地圖顯示更完美
+        dragging: !isMobile,         
+        scrollWheelZoom: false,      
+        tap: !isMobile,              
+        touchZoom: isMobile ? 'center' : true 
+    }).setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5); 
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(mapInstance);
-    
-    // 如果是手機版，另外加入雙指縮放提示（選配，可以防止使用者以為地圖壞掉）
-    if (isMobile && mapInstance.gestureHandling) {
-        // 若未來有引入 Leaflet.GestureHandling 外掛才需要，目前這樣設定就能完美防誤觸
-    }
 
-    initRailwayGraph(); // 初始化網狀尋路圖
+    initRailwayGraph(); 
     addNewRow("臺北", "高雄", 2);
     setTimeout(calculateAllRoutes, 300);
 });
@@ -340,181 +333,95 @@ function calculateAllRoutes() {
     const allRouteLatLngs = []; 
 
     rows.forEach(row => {
-    const rowId = row.id;
-    const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
-    const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
-    const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
-    
-    // 💡 關鍵修正：拋棄 index % ROUTE_COLORS.length 這種會錯位的抽法
-    // 直接去撈左側網頁表格中，那一行圓點 (.color-badge) 實際顯示的背景顏色
-    let colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length]; // 預設留作備份底色
-    const badgeEl = row.querySelector('.color-badge');
-    if (badgeEl && badgeEl.style.backgroundColor) {
-        colorHex = badgeEl.style.backgroundColor;
-    }
-    index++; // 保持 index 自增以防其他地方有用到
-    
-    if (startName === endName) return; 
-    
-    const routeResult = findShortestPath(startName, endName);
-    
-    if (routeResult && routeResult.distance > 0) {
-        const CARBON_FACTOR = 0.048;
-        const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
+        const rowId = row.id;
+        const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
+        const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
+        const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
         
-        document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
-        document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
+        let colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length]; 
+        const badgeEl = row.querySelector('.color-badge');
+        if (badgeEl && badgeEl.style.backgroundColor) {
+            colorHex = badgeEl.style.backgroundColor;
+        }
+        index++; 
         
-        rowDataStore[rowId] = { 
-            dist: routeResult.distance, 
-            carbon: trainCarbon, 
-            path: routeResult.path.join(' → '), 
-            nodes: routeResult.path 
-        };
+        if (startName === endName) return; 
         
-        totalDist += routeResult.distance; 
-        totalCarbon += trainCarbon; 
-        validCount++;
+        const routeResult = findShortestPath(startName, endName);
         
-        mapLayers[rowId] = [];
-        const currentRouteLatLngs = [];
-        
-        routeResult.path.forEach((node, nIdx) => {
-            const pos = getStationLatLng(node);
-            if (pos) {
-                currentRouteLatLngs.push(pos);
-                allRouteLatLngs.push(pos);
-                
-                if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
-                    const isStart = (nIdx === 0);
-                    // 💡 這裡的 fillColor 和 color 也會自動套用正確的顏色！
-                    const marker = L.circleMarker(pos, { 
-                        radius: isStart ? 6 : 5, 
-                        fillColor: isStart ? '#ffffff' : colorHex, 
-                        color: colorHex, 
-                        weight: 2, 
-                        fillOpacity: 1.0 
-                    }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
+        if (routeResult && routeResult.distance > 0) {
+            const CARBON_FACTOR = 0.048;
+            const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
+            
+            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
+            document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
+            
+            rowDataStore[rowId] = { 
+                dist: routeResult.distance, 
+                carbon: trainCarbon, 
+                path: routeResult.path.join(' → '), 
+                nodes: routeResult.path 
+            };
+            
+            totalDist += routeResult.distance; 
+            totalCarbon += trainCarbon; 
+            validCount++;
+            
+            mapLayers[rowId] = [];
+            const currentRouteLatLngs = [];
+            
+            routeResult.path.forEach((node, nIdx) => {
+                const pos = getStationLatLng(node);
+                if (pos) {
+                    currentRouteLatLngs.push(pos);
+                    allRouteLatLngs.push(pos);
                     
-                    mapLayers[rowId].push(marker);
-                }
-            }
-        });
-
-        if (currentRouteLatLngs.length >= 2) {
-            // 💡 這裡的 color: colorHex 就會是百分之百跟圖軸相同的顏色了！
-            const polylineBack = L.polyline(currentRouteLatLngs, { 
-                color: colorHex, 
-                weight: 5, 
-                opacity: 0.7, 
-                customType: 'back' 
-            }).addTo(mapInstance);
-
-            const polylineFront = L.polyline(currentRouteLatLngs, { 
-                color: '#ffffff', 
-                weight: 2, 
-                dashArray: '5, 8', 
-                opacity: 0.9, 
-                customType: 'front' 
-            }).addTo(mapInstance);
-
-            mapLayers[rowId].push(polylineBack, polylineFront);
-        }
-    }
-});
-// 💡 100% 強行清空與畫面隔離版
-function clearAllRows() {
-    // 1. 彈出確認視窗，防止誤觸
-    if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
-        return;
-    }
-
-    // 2. 徹底清空前端 HTML 表格內容
-    const excelBody = document.getElementById('excelBody');
-    if (excelBody) {
-        excelBody.innerHTML = '';
-    }
-
-    // 3. 全面且安全地移除地圖上的路線與標記
-    // 檢查是否有 Leaflet 地圖實例，並且手動遍歷清除
-    if (typeof mapLayers !== 'undefined' && mapLayers) {
-        for (let rowId in mapLayers) {
-            if (Array.isArray(mapLayers[rowId])) {
-                mapLayers[rowId].forEach(layer => {
-                    // 加上層層防禦檢查，確保 layer 存在且地圖上有這個圖層才做移除
-                    if (layer && typeof mapInstance !== 'undefined' && mapInstance && mapInstance.hasLayer(layer)) {
-                        try {
-                            mapInstance.removeLayer(layer);
-                        } catch (e) {
-                            console.log("地圖圖層移除輕微跳過:", e);
-                        }
+                    if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
+                        const isStart = (nIdx === 0);
+                        const marker = L.circleMarker(pos, { 
+                            radius: isStart ? 6 : 5, 
+                            fillColor: isStart ? '#ffffff' : colorHex, 
+                            color: colorHex, 
+                            weight: 2, 
+                            fillOpacity: 1.0 
+                        }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
+                        
+                        mapLayers[rowId].push(marker);
                     }
-                });
+                }
+            });
+
+            if (currentRouteLatLngs.length >= 2) {
+                const polylineBack = L.polyline(currentRouteLatLngs, { 
+                    color: colorHex, 
+                    weight: 5, 
+                    opacity: 0.7, 
+                    customType: 'back' 
+                }).addTo(mapInstance);
+
+                const polylineFront = L.polyline(currentRouteLatLngs, { 
+                    color: '#ffffff', 
+                    weight: 2, 
+                    dashArray: '5, 8', 
+                    opacity: 0.9, 
+                    customType: 'front' 
+                }).addTo(mapInstance);
+
+                mapLayers[rowId].push(polylineBack, polylineFront);
             }
         }
-    }
-    
-    // 直接用最暴力但最乾淨的方法：叫 Leaflet 尋找地圖上所有的 Polyline 和 CircleMarker 並清除
-    if (typeof mapInstance !== 'undefined' && mapInstance) {
-        mapInstance.eachLayer(function (layer) {
-            // 不要刪除底圖瓷磚 (TileLayer) 即可，其餘繪製的鐵軌、圓點都清除
-            if (layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
-                mapInstance.removeLayer(layer);
-            }
-        });
-    }
-    
-    // 4. 重設所有相關的全域變數與資料暫存容器
-    mapLayers = {};
-    if (typeof rowDataStore !== 'undefined') rowDataStore = {};
-    if (typeof allRouteLatLngs !== 'undefined') allRouteLatLngs = [];
-    
-    // 5. 隱藏路線詳情看板
-    const pathInfoBox = document.getElementById('pathInfoBox');
-    if (pathInfoBox) {
-        pathInfoBox.style.display = 'none';
-        const activePathText = document.getElementById('activePathText');
-        if (activePathText) activePathText.innerText = '-';
-    }
-    
-    // 6. 強制重設累加用的顏色 index 指標
-    if (typeof index !== 'undefined') index = 0;
-
-    // 7. 💡 關鍵：完全手動強行洗掉總計數據，繞過原計算函數的報錯痛點
-    const totalCount = document.getElementById('totalCount');
-    const totalDistance = document.getElementById('totalDistance');
-    const totalCarbon = document.getElementById('totalCarbon');
-    const summaryResult = document.getElementById('summaryResult');
-
-    if (totalCount) totalCount.innerText = '0';
-    if (totalDistance) totalDistance.innerText = '0';
-    if (totalCarbon) totalCarbon.innerText = '0';
-    
-    // 偵測裝置以調整看板顯示狀態
-    const isMobile = window.innerWidth <= 768;
-    if (summaryResult) {
-        if (isMobile) {
-            summaryResult.style.display = 'flex'; // 手機版維持固定底部的結帳條 (數值為0)
-        } else {
-            summaryResult.style.display = 'none'; // 桌機版無資料則隱藏
-        }
-    }
-
-    // 8. 還原地圖視野回台灣全圖
-    if (typeof mapInstance !== 'undefined' && mapInstance) {
-        try {
-            mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
-        } catch(e) {
-            console.log("地圖視野重設跳過");
-        }
-    }
-
-    console.log("=== 行程與地圖已強制一鍵清空完畢 ===");
-}
+    });
 
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
         summaryBox.style.display = "block";
+        
+        // 💡 修正手機版在有資料時的 display 屬性 (防止手機版 flex 排版走鐘)
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            summaryBox.style.display = "flex";
+        }
+
         document.getElementById("totalCount").innerText = validCount;
         document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
         document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
@@ -542,6 +449,57 @@ function clearAllRows() {
         }
     } else {
         summaryBox.style.display = "none";
+    }
+}
+
+// 💡 修正：將 clearAllRows 完美抽離出來，成為一個獨立、乾淨且最高等級防錯的獨立函數
+function clearAllRows() {
+    if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
+        return;
+    }
+
+    try {
+        const excelBody = document.getElementById('excelBody');
+        if (excelBody) {
+            excelBody.innerHTML = '';
+        }
+
+        if (typeof mapInstance !== 'undefined' && mapInstance) {
+            mapInstance.eachLayer(function (layer) {
+                if (layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
+                    mapInstance.removeLayer(layer);
+                }
+            });
+        }
+        
+        mapLayers = {};
+        rowDataStore = {};
+        rowCounter = 0; // 重設列數計數器
+
+        const pathInfoBox = document.getElementById('pathInfoBox');
+        if (pathInfoBox) pathInfoBox.style.display = 'none';
+        
+        const totalCount = document.getElementById('totalCount');
+        const totalDistance = document.getElementById('totalDistance');
+        const totalCarbon = document.getElementById('totalCarbon');
+        const summaryResult = document.getElementById('summaryResult');
+
+        if (totalCount) totalCount.innerText = '0';
+        if (totalDistance) totalDistance.innerText = '0';
+        if (totalCarbon) totalCarbon.innerText = '0';
+        
+        const isMobile = window.innerWidth <= 768;
+        if (summaryResult) {
+            summaryResult.style.display = isMobile ? 'flex' : 'none'; 
+        }
+
+        if (typeof mapInstance !== 'undefined' && mapInstance) {
+            mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
+        }
+
+        console.log("=== 全域行程與地圖已一鍵強制清空 ===");
+    } catch (e) {
+        console.error("清空時發生非預期輕微異常，已自動跳過:", e);
     }
 }
 
