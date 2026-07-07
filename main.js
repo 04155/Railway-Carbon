@@ -567,6 +567,29 @@ function exportToExcel() {
     try {
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
+        
+        // 💡 【核心新增：自動計算並調好格子大小】
+        // 遍歷每一行、每一列，找出最長的字元長度來設定欄寬
+        const colsWidth = excelData[0].map((_, colIndex) => {
+            // 抓出這一欄中所有儲存格的文字長度
+            const maxLen = excelData.reduce((max, row) => {
+                const cellValue = row[colIndex] ? row[colIndex].toString() : "";
+                
+                // 智慧判斷：中文字元佔用 2 個寬度，英數符號佔用 1 個寬度
+                let currentLen = 0;
+                for (let i = 0; i < cellValue.length; i++) {
+                    currentLen += cellValue.charCodeAt(i) > 128 ? 2 : 1;
+                }
+                
+                return Math.max(max, currentLen);
+            }, 10); // 💡 設定保底最小寬度為 10
+            
+            return { wch: maxLen + 3 }; // 💡 加上 3 個緩衝字元，留點白更好看
+        });
+        
+        // 將計算好的寬度陣列賦值給工作表
+        worksheet['!cols'] = colsWidth;
+
         XLSX.utils.book_append_sheet(workbook, worksheet, "台鐵碳排規劃結果");
         
         const dateStr = new Date().toISOString().slice(0, 10);
