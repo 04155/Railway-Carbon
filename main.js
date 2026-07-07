@@ -1,4 +1,4 @@
-// main.js - Constants and Global Variables
+// main.js - 火車站各路線里程&座標
 const STATION_DB = {
     "main": {
         "基隆": 0.0, "三坑": 1.5, "八堵": 3.9, "七堵": 6.2, "百福": 8.9, "五堵": 11.9,
@@ -58,53 +58,53 @@ const STATION_GEO = {
     "暖暖": [25.102, 121.740], "四腳亭": [25.103, 121.761], "猴硐": [25.087, 121.827], "冬山": [24.636, 121.792],
     "東澳": [24.519, 121.828], "南澳": [24.464, 121.799], "和平": [24.303, 121.753], "崇德": [24.162, 121.659]
 };
-
+//不重複站名&排序&規劃路線顏色循環
 const stations = Array.from(new Set(Object.keys(STATION_DB).flatMap(line => Object.keys(STATION_DB[line])))).sort();
 const ROUTE_COLORS = ["#2563eb", "#ea580c", "#16a34a", "#9333ea", "#db2777", "#0d9488", "#eab308", "#4b5563"];
 
-let mapInstance = null;
-let mapLayers = {}; 
-let rowCounter = 0;
-let rowDataStore = {};
-const RAILWAY_GRAPH = {};
-
+let mapInstance = null;     // 儲存 Leaflet 地圖實例
+let mapLayers = {};         // 紀錄Row對應地圖線段&標記
+let rowCounter = 0;         // 紀錄目前新增到第幾列，作為唯一 ID 用
+let rowDataStore = {};      // 儲存每一列計算出的里程、碳排、站點序列資料
+const RAILWAY_GRAPH = {};   // 將台鐵車站轉換為鄰接串列的圖（Graph）結構
+//初始化:網頁DOM結構載入後執行
 document.addEventListener('DOMContentLoaded', () => {
     console.log("JS 載入成功");
-    
+    //check 手機板寬度<768px
     const isMobile = window.innerWidth <= 768;
-
+    // 初始化 Leaflet 地圖，並針對手機做優化配置
     mapInstance = L.map('map', {
-        dragging: !isMobile,         
-        scrollWheelZoom: false,      
+        dragging: !isMobile,        // 手機版禁用單指拖地圖（避免滑動網頁時卡住）   
+        scrollWheelZoom: false,     // 禁用滑鼠滾輪縮放地圖    
         tap: !isMobile,              
-        touchZoom: isMobile ? 'center' : true 
-    }).setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5); 
-
+        touchZoom: isMobile ? 'center' : true   // 手機版允許雙指從中心縮放
+    }).setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5); // 設定台灣中心點的視角
+    // 載入 OpenStreetMap 開源地圖圖磚
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(mapInstance);
-
-    initRailwayGraph(); 
-    addNewRow("臺北", "高雄", 2);
-    setTimeout(calculateAllRoutes, 300);
+    
+    initRailwayGraph();            // 建立車站與車站之間的鄰接網路圖
+    addNewRow("臺北", "高雄", 2);   //sample 1
+    setTimeout(calculateAllRoutes, 300);    // 延遲 300 毫秒後自動計算
 });
-
+//檔案匯入
 function importCSV(input) {
     const file = input.files[0];
     if (!file) return;
 
     const fileName = file.name.toLowerCase();
-    const reader = new FileReader();
+    const reader = new FileReader();        // 建立檔案讀取器
 
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
+                const workbook = XLSX.read(data, { type: 'array' });    // SheetJS 讀取二進位資料
+                const firstSheetName = workbook.SheetNames[0];          // 取第一個工作表
                 const worksheet = workbook.Sheets[firstSheetName];
-                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                processImportedRows(rows);
+                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });    // 轉成二維陣列
+                processImportedRows(rows);  // 處理資料列
             } catch (err) {
                 console.error(err);
                 alert('讀取 Excel 檔案失敗，請檢查檔案格式是否正確。');
@@ -115,14 +115,14 @@ function importCSV(input) {
         reader.onload = function(e) {
             try {
                 const buffer = e.target.result;
-                let decoder = new TextDecoder('utf-8');
+                let decoder = new TextDecoder('utf-8'); //解碼
                 let text = decoder.decode(buffer);
-                
+                // 如果文字內含有特殊亂碼符號，嘗試改用 Big5 (台灣常見舊式 CSV 編碼) 重新讀取
                 if (text.includes('')) {
                     decoder = new TextDecoder('big5');
                     text = decoder.decode(buffer);
                 }
-
+                // 將純文字依行(換行符)與列(逗號)切開為二維陣列
                 const rows = text.split(/\r?\n/)
                                  .filter(row => row.trim() !== '')
                                  .map(row => row.split(','));
@@ -137,9 +137,9 @@ function importCSV(input) {
     } else {
         alert('不支援的檔案格式！請上傳 .csv 或 .xlsx 檔案。');
     }
-    input.value = '';
+    input.value = '';   // 清空 input 的 value，以便下次可以重複上傳同檔名檔案
 }
-
+// 處理並過濾匯入後的二維陣列資料
 function processImportedRows(rows) {
     let successCount = 0;
 
@@ -147,7 +147,7 @@ function processImportedRows(rows) {
         if (row.length >= 2) {
             const startStation = row[0]?.toString().trim() || "";
             const endStation = row[1]?.toString().trim() || "";
-            
+            // 標頭檔 (起點、終點、start) 跳過不匯入
             if (
                 startStation === "起點" || 
                 endStation === "終點" || 
@@ -159,7 +159,7 @@ function processImportedRows(rows) {
                 console.log(`[已自動過濾雜訊列] 行號 ${rowIndex}:`, row);
                 return;
             }
-            
+            // 讀取人數，若沒填或不是數字，預設為 1 人
             let count = row[2]?.toString().trim();
             if (!count || isNaN(count)) {
                 count = 1;
@@ -176,21 +176,21 @@ function processImportedRows(rows) {
 
     if (successCount > 0) {
         alert(`成功匯入 ${successCount} 筆行程！`);
-        calculateAllRoutes();
+        calculateAllRoutes();   // 匯入完畢後自動觸發重新計算
     } else {
         alert('沒有找到有效的行程資料！');
     }
 }
-
+// 動態在 HTML 的 Table 中建立一列全新的行程
 function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
     rowCounter++;
-    const rowId = `row_${rowCounter}`;
+    const rowId = `row_${rowCounter}`;  // 生成獨一無二的列識別碼
     const tbody = document.getElementById("excelBody");
-    const colorHex = ROUTE_COLORS[(rowCounter - 1) % ROUTE_COLORS.length];
+    const colorHex = ROUTE_COLORS[(rowCounter - 1) % ROUTE_COLORS.length];  // 分配顏色
     const tr = document.createElement("tr");
     tr.id = rowId;
-    tr.onclick = () => highlightRow(rowId);
-    
+    tr.onclick = () => highlightRow(rowId); // 點擊該列時highlight路線
+    // 插入包含自訂下拉選單與輸入框的 HTML 結構
     tr.innerHTML = `
         <td style="text-align: center;">
             <span class="color-badge" style="background-color: ${colorHex};"></span>
@@ -220,36 +220,36 @@ function addNewRow(startDef = "臺北", endDef = "高雄", passDef = 1) {
         <td><span id="${rowId}_carbonText">-</span></td>
         <td><button class="btn-action btn-del" onclick="deleteRow(event, '${rowId}')">刪除</button></td>
     `;
-    
+    // 初始化自訂起點/終點車站下拉選單元件，當改變站點時會自動重算
     tbody.appendChild(tr);
     initTableRowSelect(`${rowId}_startCombo`, `${rowId}_startTrigger`, () => { resetRowResults(rowId); calculateAllRoutes(); });
     initTableRowSelect(`${rowId}_endCombo`, `${rowId}_endTrigger`, () => { resetRowResults(rowId); calculateAllRoutes(); });
 }
-
+// 刪除單一列行程
 function deleteRow(e, rowId) {
-    e.stopPropagation();
+    e.stopPropagation();    // 阻止事件冒泡，避免觸發 highlightRow()
     const row = document.getElementById(rowId);
     if (row) {
-        row.remove();
-        delete rowDataStore[rowId];
-        if (mapLayers[rowId]) {
+        row.remove();   // 從 DOM 中移除
+        delete rowDataStore[rowId]; // 從快取中刪除
+        if (mapLayers[rowId]) {     // 從地圖上移除該線段與 Marker
             mapLayers[rowId].forEach(layer => mapInstance.removeLayer(layer));
             delete mapLayers[rowId];
         }
-        calculateAllRoutes(); 
+        calculateAllRoutes();   // 重新計算加總結果
     }
 }
-
+// 重設該列的文字（當使用者修改人數時，里程先歸零等待重算）
 function resetRowResults(rowId) {
     document.getElementById(`${rowId}_distanceText`).innerText = "-";
     document.getElementById(`${rowId}_carbonText`).innerText = "-";
 }
-
+// 當使用者點擊某一列時，高亮地圖上的線段，並將其他路線淡化
 function highlightRow(rowId) {
     document.querySelectorAll("#excelBody tr").forEach(tr => tr.classList.remove("active-row"));
     const targetRow = document.getElementById(rowId);
     if (targetRow) targetRow.classList.add("active-row");
-
+    // 顯示詳細經過站點
     const data = rowDataStore[rowId];
     if (data && data.nodes && data.nodes.length > 0) {
         document.getElementById("pathInfoBox").style.display = "block";
@@ -257,7 +257,7 @@ function highlightRow(rowId) {
     } else {
         document.getElementById("pathInfoBox").style.display = "none";
     }
-
+    // 遍歷所有地圖圖層，調整不透明度 (Opacity) 與線條粗細 (Weight)
     Object.keys(mapLayers).forEach(key => {
         const isCurrent = (key === rowId);
         mapLayers[key].forEach(layer => {
@@ -276,53 +276,54 @@ function highlightRow(rowId) {
         });
     });
 }
-
+// 為每個車站選擇器綁定點擊展開、關鍵字過濾的邏輯
 function initTableRowSelect(comboId, triggerId, onChangeCallback) {
     const container = document.getElementById(comboId);
     const trigger = document.getElementById(triggerId);
     const dropdown = container.querySelector(".dropdown-box");
     const filterInput = dropdown.querySelector(".filter-input");
     const list = dropdown.querySelector(".station-list");
-
+    // 點擊觸發開關
     trigger.addEventListener("click", (e) => {
         e.stopPropagation();
         const isOpen = container.classList.contains("open");
-        closeAllCombos();
+        closeAllCombos();   // 先關閉畫面上其他開啟的選單
         if (!isOpen) {
             container.classList.add("open");
-            renderList("");
+            renderList(""); // 渲染所有車站
             filterInput.value = "";
-            setTimeout(() => filterInput.focus(), 50);
+            setTimeout(() => filterInput.focus(), 50);  // 自動聚焦搜尋框
         }
     });
-
+    // 內部函數：根據關鍵字渲染可選車站清單
     function renderList(filterText = "") {
         list.innerHTML = "";
-        const filtered = stations.filter(s => s.includes(filterText));
+        const filtered = stations.filter(s => s.includes(filterText));  // 關鍵字比對
         filtered.forEach(station => {
             const li = document.createElement("li");
             li.className = "station-item" + (trigger.innerText === station ? " selected" : "");
             li.innerText = station;
             li.onclick = (ev) => {
                 ev.stopPropagation();
-                trigger.innerText = station;
-                container.classList.remove("open");
-                onChangeCallback();
+                trigger.innerText = station;    // 選擇車站
+                container.classList.remove("open"); //關閉選單
+                onChangeCallback(); // 觸發重算回呼函數
             };
             list.appendChild(li);
         });
     }
-    
+    // 當輸入文字時，即時過濾車站
     filterInput.oninput = function() { renderList(this.value.trim()); };
-    dropdown.onclick = (ev) => ev.stopPropagation();
+    dropdown.onclick = (ev) => ev.stopPropagation();    // 防止點擊下拉框內部時意外關閉
 }
-
+// 關閉所有開啟中的選單
 function closeAllCombos() {
     document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
 }
-document.addEventListener("click", closeAllCombos);
-
+document.addEventListener("click", closeAllCombos); // 點擊網頁任意空白處即收起選單
+// 計算所有行程的里程、碳排，並在畫面上更新統計與地圖線段
 function calculateAllRoutes() {
+    // 1. 清空舊的地圖線段與標記
     Object.keys(mapLayers).forEach(key => { 
         mapLayers[key].forEach(layer => mapInstance.removeLayer(layer)); 
     });
@@ -330,8 +331,8 @@ function calculateAllRoutes() {
     
     const rows = document.querySelectorAll("#excelBody tr");
     let totalDist = 0, totalCarbon = 0, validCount = 0, index = 0;
-    const allRouteLatLngs = []; 
-
+    const allRouteLatLngs = []; // 搜集所有點的座標
+    // 2. 逐行遍歷計算
     rows.forEach(row => {
         const rowId = row.id;
         const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
@@ -345,17 +346,17 @@ function calculateAllRoutes() {
         }
         index++; 
         
-        if (startName === endName) return; 
-        
+        if (startName === endName) return; // 起終點相同不計算
+        // 利用 Dijkstra 圖論演算法尋找兩火車站之間的最短火車路線里程與站點序列
         const routeResult = findShortestPath(startName, endName);
         
         if (routeResult && routeResult.distance > 0) {
-            const CARBON_FACTOR = 0.048;
+            const CARBON_FACTOR = 0.048;    // 碳排計算標準：台鐵每人每公里碳排因子設定為 0.048 kg CO2e
             const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
-            
+            // 寫回前端畫面表格中
             document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
             document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
-            
+            // 存入全域全快取變數中
             rowDataStore[rowId] = { 
                 dist: routeResult.distance, 
                 carbon: trainCarbon, 
@@ -369,13 +370,13 @@ function calculateAllRoutes() {
             
             mapLayers[rowId] = [];
             const currentRouteLatLngs = [];
-            
+            // 3. 地圖節點與連線繪製
             routeResult.path.forEach((node, nIdx) => {
                 const pos = getStationLatLng(node);
                 if (pos) {
                     currentRouteLatLngs.push(pos);
                     allRouteLatLngs.push(pos);
-                    
+                    //起點終點圓圈標記
                     if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
                         const isStart = (nIdx === 0);
                         const marker = L.circleMarker(pos, { 
@@ -390,7 +391,7 @@ function calculateAllRoutes() {
                     }
                 }
             });
-
+            // 地圖繪製仿鐵軌視覺效果的疊加線段 (雙層 Polyline)
             if (currentRouteLatLngs.length >= 2) {
                 const polylineBack = L.polyline(currentRouteLatLngs, { 
                     color: colorHex, 
@@ -411,7 +412,7 @@ function calculateAllRoutes() {
             }
         }
     });
-
+    // 4. 更新左下角的總計資訊區塊
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
         summaryBox.style.display = "block";
@@ -425,7 +426,7 @@ function calculateAllRoutes() {
         document.getElementById("totalCount").innerText = validCount;
         document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
         document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
-        
+        // 智慧縮放地圖
         if (allRouteLatLngs.length > 0 && mapInstance) {
             try {
                 const bounds = L.latLngBounds();
@@ -452,7 +453,7 @@ function calculateAllRoutes() {
     }
 }
 
-// 💡 修正：將 clearAllRows 完美抽離出來，成為一個獨立、乾淨且最高等級防錯的獨立函數
+// 一鍵清空所有行程資料與地圖重新初始化
 function clearAllRows() {
     if (!confirm("確定要刪除所有行程嗎？此操作無法復原。")) {
         return;
@@ -461,9 +462,9 @@ function clearAllRows() {
     try {
         const excelBody = document.getElementById('excelBody');
         if (excelBody) {
-            excelBody.innerHTML = '';
+            excelBody.innerHTML = '';   // 清空 HTML
         }
-
+        // 強制移除地圖上所有的火車軌道線段與圖標
         if (typeof mapInstance !== 'undefined' && mapInstance) {
             mapInstance.eachLayer(function (layer) {
                 if (layer instanceof L.Polyline || layer instanceof L.CircleMarker || layer instanceof L.Marker) {
@@ -471,7 +472,7 @@ function clearAllRows() {
                 }
             });
         }
-        
+        // 變數初始化
         mapLayers = {};
         rowDataStore = {};
         rowCounter = 0; // 重設列數計數器
@@ -492,7 +493,7 @@ function clearAllRows() {
         if (summaryResult) {
             summaryResult.style.display = isMobile ? 'flex' : 'none'; 
         }
-
+        // 把地圖視野還原回初始全台灣视角
         if (typeof mapInstance !== 'undefined' && mapInstance) {
             mapInstance.setView(isMobile ? [23.6, 120.8] : [23.8, 121.0], isMobile ? 7.0 : 7.5);
         }
@@ -502,7 +503,7 @@ function clearAllRows() {
         console.error("清空時發生非預期輕微異常，已自動跳過:", e);
     }
 }
-
+// 智慧型車站經緯度轉換函數 (支援帶有「站」或「車站」的模糊名稱配對)
 function getStationLatLng(stationName) {
     if (!stationName) return null;
 
@@ -518,18 +519,18 @@ function getStationLatLng(stationName) {
     }
     return null; 
 }
-
+// 將表格資料整合統計數據，格式化並導出成標準的 Excel 檔案 (.xlsx)
 function exportToExcel() {
     const rows = document.querySelectorAll("#excelBody tr");
     if (rows.length === 0) {
         alert("目前表格中沒有任何行程資料可以匯出喔！");
         return;
     }
-
+    // 初始化 Excel 表頭
     const excelData = [
         ["起點站", "終點站", "人數", "預估里程 (km)", "碳排放量 (kg)", "完整經過路線節點"]
     ];
-
+    // 塞入資料列
     rows.forEach(row => {
         const rowId = row.id;
         const startStation = document.getElementById(`${rowId}_startTrigger`)?.innerText || "";
@@ -551,7 +552,7 @@ function exportToExcel() {
             fullPath
         ]);
     });
-
+    // 尾部追加總計看板資訊
     const summaryBox = document.getElementById("summaryResult");
     if (summaryBox && summaryBox.style.display !== "none") {
         const totalCount = document.getElementById("totalCount")?.innerText || "0";
@@ -592,14 +593,14 @@ function exportToExcel() {
 
         XLSX.utils.book_append_sheet(workbook, worksheet, "台鐵碳排規劃結果");
         
-        const dateStr = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(workbook, `台鐵碳排批次規劃表_${dateStr}.xlsx`);
+        const dateStr = new Date().toISOString().slice(0, 10);  // 取得當前日期 YYYY-MM-DD
+        XLSX.writeFile(workbook, `台鐵碳排批次規劃表_${dateStr}.xlsx`); // 下載 Excel
     } catch (error) {
         console.error("匯出 Excel 發生錯誤:", error);
         alert("匯出失敗，請確保網頁已正確載入 Excel 處理套件。");
     }
 }
-
+// 最短火車路線計算:將原先線性分支的 STATION_DB 拆解並重新組裝為圖論中的「雙向鄰接串列網路」
 function initRailwayGraph() {
     for (let lineName in STATION_DB) {
         const line = STATION_DB[lineName];
@@ -617,9 +618,8 @@ function initRailwayGraph() {
                 const nextStation = stationsList[i + 1];
                 const nextDist = line[nextStation];
                 const distance = Math.abs(nextDist - currentDist); 
-                
+                // 雙向圖設定：A連到B，B也要連回A
                 RAILWAY_GRAPH[currentStation][nextStation] = distance;
-                
                 if (!RAILWAY_GRAPH[nextStation]) {
                     RAILWAY_GRAPH[nextStation] = {};
                 }
@@ -628,7 +628,7 @@ function initRailwayGraph() {
         }
     }
 }
-
+// 實作經典的 Dijkstra 最短路徑演算法
 function findShortestPath(start, end) {
     if (start === end) return { distance: 0, path: [start] };
     if (!(start in RAILWAY_GRAPH) || !(end in RAILWAY_GRAPH)) return null;
@@ -636,7 +636,7 @@ function findShortestPath(start, end) {
     const distances = {};
     const prev = {};
     const queue = new Set();
-
+    // 初始化所有頂點距離為無限大，前置點為空
     for (let station in RAILWAY_GRAPH) {
         distances[station] = Infinity;
         prev[station] = null;
@@ -665,17 +665,17 @@ function findShortestPath(start, end) {
         }
 
         queue.delete(u);
-
+        // 更新城市 u 的所有鄰近車站的距離
         const neighbors = RAILWAY_GRAPH[u];
         for (let neighbor in neighbors) {
             if (!queue.has(neighbor)) continue;
             
-            const alt = distances[u] + neighbors[neighbor];
-            if (alt < distances[neighbor]) {
+            const alt = distances[u] + neighbors[neighbor]; // 新路徑總長度
+            if (alt < distances[neighbor]) {        // 如果比之前的路徑更短，更新它
                 distances[neighbor] = alt;
                 prev[neighbor] = u;
             }
         }
     }
-    return null;
+    return null;    // 無法連通
 }
