@@ -140,6 +140,7 @@ function importCSV(input) {
     }
     input.value = '';
 }
+alert("測試測試！");
 // 開啟預覽視窗
 // 這個函數用來負責顯示那個預覽視窗
 function openImportModal(rows) {
