@@ -185,3 +185,70 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
 .btn-calc { background: #3b82f6; color: white; margin-left: 10px; }
 .btn-calc:hover { background: #2563eb; }
+
+/* =========================================
+   手機與行動裝置專用 RWD 響應式優化 (螢幕 768px 以下)
+   ========================================= */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 10px; /* 縮減外邊距，留給內容更多空間 */
+    }
+
+    .main-wrapper {
+        flex-direction: column; /* 強制將左面板與右地圖改為「上下堆疊」 */
+        height: auto; /* 解除 90vh 的限制，讓內容能自然向下延伸 */
+        gap: 15px;
+    }
+
+    .left-panel, .right-panel {
+        flex: none; /* 取消原本的 flex 比例分配 */
+        width: 100%; /* 寬度皆佔滿 100% */
+    }
+
+    .right-panel {
+        height: 400px; /* 固定的地圖高度，方便手機滑動與觀看 */
+        order: -1; /* 💡 關鍵：讓地圖在手機板排在最上方，看完地圖直接往下滑動操作表單 */
+    }
+
+    #map {
+        height: 100%; /* 確保地圖填滿 RWD 給予的 400px 高度 */
+    }
+
+    /* 按鈕調整：在手機上稍微放大，更方便用手指點擊（避免誤觸） */
+    .btn-action {
+        padding: 12px 16px;
+        font-size: 14px;
+        margin-bottom: 8px;
+        width: 100%; /* 讓按鈕在手機上獨佔一行，視覺上更整齊 */
+        box-sizing: border-box;
+    }
+    
+    .btn-calc {
+        margin-left: 0 !important; /* 清除原本在桌機版設定的左邊距 */
+    }
+    
+    button[onclick="exportToExcel()"] {
+        width: 100%;
+        margin-left: 0 !important;
+        margin-bottom: 8px;
+        padding: 12px 16px !important;
+    }
+
+    /* 表格容器優化 */
+    .table-responsive {
+        padding-bottom: 250px !important; /* 手機上稍微增加空間，確保下拉選單完全不被卡住 */
+        margin-bottom: -250px !important;
+    }
+
+    /* 下拉選單寬度調整：在窄螢幕下，讓選單稍微加寬，避免站名折行 */
+    .dropdown-box {
+        min-width: 180px; 
+    }
+    
+    /* 調整表格內輸入框的大小，方便手指點擊調整人數 */
+    .num-input {
+        width: 60px;
+        padding: 8px 5px;
+        text-align: center;
+    }
+}
