@@ -140,14 +140,12 @@ function importCSV(input) {
     }
     input.value = '';
 }
-alert("測試測試！");
+//alert("測試測試！");
 // 開啟預覽視窗
-// 這個函數用來負責顯示那個預覽視窗
 function openImportModal(rows) {
-    console.log("視窗啟動中..."); // 幫我看看按匯入時，F12 主控台有沒有出現這行字
+    console.log("視窗啟動中...");
     const previewBody = document.getElementById("importPreviewBody");
     previewBody.innerHTML = ""; 
-
     // 簡單過濾掉標題列
     const dataRows = (rows[0][0] === '起點' || isNaN(parseInt(rows[0][2]))) ? rows.slice(1) : rows;
 
@@ -171,7 +169,7 @@ function openImportModal(rows) {
     modal.style.display = "flex"; // 強制指定為 flex，確保它顯示出來
     console.log("視窗應該已經被設為 flex 了");
 }
-
+//關閉視窗
 function closeImportModal() {
     document.getElementById("importModal").style.display = "none";
 }
