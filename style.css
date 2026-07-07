@@ -15,7 +15,7 @@ body {
 .main-wrapper {
     display: flex;
     gap: 20px;  /* 左右面板間距 20px */
-    max-width: 1400px;
+    max-width: 95vw;
     margin: 0 auto;
     height: 90vh;
 }
@@ -30,7 +30,7 @@ body {
 }
 
 .right-panel {
-    flex: 1.5;
+    flex: 2;
     background: white;
     padding: 10px;
     border-radius: 12px;
@@ -40,7 +40,7 @@ body {
     overflow: hidden;
 }
 
-h2 { margin-bottom: 20px; color: #2d3436; }
+h2 { margin-bottom: 24px; color: #2d3436; }
 
 #map {
     flex-grow: 1;
