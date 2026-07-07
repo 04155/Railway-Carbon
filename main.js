@@ -318,12 +318,28 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
     const filterInput = dropdown.querySelector(".filter-input");
     const list = dropdown.querySelector(".station-list");
 
+    // 新增：用來動態更新選單位置的函式
+    function updateDropdownPosition() {
+        if (container.classList.contains("open")) {
+            const rect = trigger.getBoundingClientRect();
+            // 計算輸入框正下方的位置與寬度
+            dropdown.style.setProperty('--dropdown-top', `${rect.bottom}px`);
+            dropdown.style.setProperty('--dropdown-left', `${rect.left}px`);
+            dropdown.style.setProperty('--dropdown-width', `${rect.width}px`);
+        }
+    }
+
     trigger.addEventListener("click", (e) => {
         e.stopPropagation();
         const isOpen = container.classList.contains("open");
         closeAllCombos();
         if (!isOpen) {
             container.classList.add("open");
+            
+            // ─── 關鍵修正：點擊打開時，計算並綁定 fixed 的座標 ───
+            updateDropdownPosition();
+            dropdown.classList.add("is-fixed");
+            
             renderList("");
             filterInput.value = "";
             setTimeout(() => filterInput.focus(), 50);
@@ -341,13 +357,22 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
                 ev.stopPropagation();
                 trigger.innerText = station;
                 container.classList.remove("open");
+                
+                // ─── 關鍵修正：關閉選單時，移除 fixed 狀態 ───
+                dropdown.classList.remove("is-fixed");
+                
                 onChangeCallback();
             };
             list.appendChild(li);
         });
     }
+    
     filterInput.oninput = function() { renderList(this.value.trim()); };
     dropdown.onclick = (ev) => ev.stopPropagation();
+
+    // ─── 關鍵修正：當頁面捲動或縮放時，同步追蹤位置以免選單飄走 ───
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    window.addEventListener('resize', updateDropdownPosition);
 }
 
 function closeAllCombos() {
