@@ -309,7 +309,6 @@ function highlightRow(rowId) {
             }
         });
     });
-    calculateAllRoutes();
 }
 // 為每個車站選擇器綁定點擊展開、關鍵字過濾的邏輯
 function initTableRowSelect(comboId, triggerId, onChangeCallback) {
@@ -356,7 +355,6 @@ function closeAllCombos() {
     document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
 }
 document.addEventListener("click", closeAllCombos); // 點擊網頁任意空白處即收起選單
-
 // 計算所有行程的里程、碳排，並在畫面上更新統計與地圖線段
 function calculateAllRoutes() {
     // 1. 清空舊的地圖線段與標記
@@ -365,16 +363,9 @@ function calculateAllRoutes() {
     });
     mapLayers = {};
     
-    const rows = Array.from(document.querySelectorAll("#excelBody tr"));
+    const rows = document.querySelectorAll("#excelBody tr");
     let totalDist = 0, totalCarbon = 0, validCount = 0, index = 0;
-    const allRouteLatLngs = []; // 搜集所有點的座標，用於 fitBounds
-    
-    // 【核心邏輯】：判斷是否超過 50 筆
-    const isOverLimit = rows.length > 50;
-    // 取得當前選取的 rowId (如果有)
-    const activeRow = document.querySelector("#excelBody tr.active-row");
-    const activeRowId = activeRow ? activeRow.id : null;
-
+    const allRouteLatLngs = []; // 搜集所有點的座標
     // 2. 逐行遍歷計算
     rows.forEach(row => {
         const rowId = row.id;
@@ -390,17 +381,16 @@ function calculateAllRoutes() {
         index++; 
         
         if (startName === endName) return; // 起終點相同不計算
-        
+        // 利用 Dijkstra 圖論演算法尋找兩火車站之間的最短火車路線里程與站點序列
         const routeResult = findShortestPath(startName, endName);
         
         if (routeResult && routeResult.distance > 0) {
-            const CARBON_FACTOR = 0.048;    // 碳排計算標準
+            const CARBON_FACTOR = 0.048;    // 碳排計算標準：台鐵每人每公里碳排因子設定為 0.048 kg CO2e
             const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
-            
-            // 寫回前端畫面表格
+            // 寫回前端畫面表格中
             document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
             document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
-            
+            // 存入全域全快取變數中
             rowDataStore[rowId] = { 
                 dist: routeResult.distance, 
                 carbon: trainCarbon, 
@@ -412,63 +402,85 @@ function calculateAllRoutes() {
             totalCarbon += trainCarbon; 
             validCount++;
             
-            // 【地圖渲染條件判斷】：
-            // 若未超過 50 筆，或是當前選中的那一行，才進行地圖繪製
-            if (!isOverLimit || rowId === activeRowId) {
-                mapLayers[rowId] = [];
-                const currentRouteLatLngs = [];
-                
-                routeResult.path.forEach((node, nIdx) => {
-                    const pos = getStationLatLng(node);
-                    if (pos) {
-                        currentRouteLatLngs.push(pos);
-                        if (!isOverLimit) allRouteLatLngs.push(pos); // 僅在未超過時加入全域範圍計算
-
-                        if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
-                            const isStart = (nIdx === 0);
-                            const marker = L.circleMarker(pos, { 
-                                radius: isStart ? 6 : 5, 
-                                fillColor: isStart ? '#ffffff' : colorHex, 
-                                color: colorHex, 
-                                weight: 2, 
-                                fillOpacity: 1.0 
-                            }).addTo(mapInstance).bindPopup(`<b>行程 ${index} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
-                            
-                            mapLayers[rowId].push(marker);
-                        }
+            mapLayers[rowId] = [];
+            const currentRouteLatLngs = [];
+            // 3. 地圖節點與連線繪製
+            routeResult.path.forEach((node, nIdx) => {
+                const pos = getStationLatLng(node);
+                if (pos) {
+                    currentRouteLatLngs.push(pos);
+                    allRouteLatLngs.push(pos);
+                    //起點終點圓圈標記
+                    if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
+                        const isStart = (nIdx === 0);
+                        const marker = L.circleMarker(pos, { 
+                            radius: isStart ? 6 : 5, 
+                            fillColor: isStart ? '#ffffff' : colorHex, 
+                            color: colorHex, 
+                            weight: 2, 
+                            fillOpacity: 1.0 
+                        }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
+                        
+                        mapLayers[rowId].push(marker);
                     }
-                });
-
-                if (currentRouteLatLngs.length >= 2) {
-                    const polylineBack = L.polyline(currentRouteLatLngs, { 
-                        color: colorHex, weight: 5, opacity: 0.7, customType: 'back' 
-                    }).addTo(mapInstance);
-
-                    const polylineFront = L.polyline(currentRouteLatLngs, { 
-                        color: '#ffffff', weight: 2, dashArray: '5, 8', opacity: 0.9, customType: 'front' 
-                    }).addTo(mapInstance);
-
-                    mapLayers[rowId].push(polylineBack, polylineFront);
                 }
+            });
+            // 地圖繪製仿鐵軌視覺效果的疊加線段 (雙層 Polyline)
+            if (currentRouteLatLngs.length >= 2) {
+                const polylineBack = L.polyline(currentRouteLatLngs, { 
+                    color: colorHex, 
+                    weight: 5, 
+                    opacity: 0.7, 
+                    customType: 'back' 
+                }).addTo(mapInstance);
+
+                const polylineFront = L.polyline(currentRouteLatLngs, { 
+                    color: '#ffffff', 
+                    weight: 2, 
+                    dashArray: '5, 8', 
+                    opacity: 0.9, 
+                    customType: 'front' 
+                }).addTo(mapInstance);
+
+                mapLayers[rowId].push(polylineBack, polylineFront);
             }
         }
     });
-
-    // 3. 更新統計區塊與地圖視角
+    // 4. 更新左下角的總計資訊區塊
     const summaryBox = document.getElementById("summaryResult");
     if (validCount > 0) {
-        summaryBox.style.display = window.innerWidth <= 768 ? "flex" : "block";
+        summaryBox.style.display = "block";
+        
+        // 💡 修正手機版在有資料時的 display 屬性 (防止手機版 flex 排版走鐘)
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            summaryBox.style.display = "flex";
+        }
+
         document.getElementById("totalCount").innerText = validCount;
         document.getElementById("totalDistance").innerText = totalDist.toFixed(1);
         document.getElementById("totalCarbon").innerText = totalCarbon.toFixed(3);
-        
-        // 智慧縮放：若超過限制且有選中項目，僅針對選中項縮放；否則針對全域
-        const targetBounds = (!isOverLimit && allRouteLatLngs.length > 0) 
-            ? L.latLngBounds(allRouteLatLngs) 
-            : (activeRowId && mapLayers[activeRowId] ? null : null); // 此處邏輯可依需求微調
-
-        if (allRouteLatLngs.length > 0 && !isOverLimit) {
-            mapInstance.fitBounds(L.latLngBounds(allRouteLatLngs), { padding: [50, 50], maxZoom: 12 });
+        // 智慧縮放地圖
+        if (allRouteLatLngs.length > 0 && mapInstance) {
+            try {
+                const bounds = L.latLngBounds();
+                allRouteLatLngs.forEach(latlng => {
+                    if (latlng) bounds.extend(latlng);
+                });
+                
+                if (bounds.isValid()) {
+                    setTimeout(() => {
+                        mapInstance.fitBounds(bounds, {
+                            padding: [50, 50],
+                            maxZoom: 12,
+                            animate: true,
+                            duration: 0.6
+                        });
+                    }, 100);
+                }
+            } catch (err) {
+                console.error("[地圖縮放] 發生錯誤:", err);
+            }
         }
     } else {
         summaryBox.style.display = "none";
