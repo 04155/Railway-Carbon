@@ -96,14 +96,15 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 }
 .custom-select-container.open .dropdown-box { display: block; }
 
+/* 新增這個樣式，當選單打開時會切換成 fixed 定位 */
 .dropdown-box.is-fixed {
-    position: fixed; /* 關鍵：改成固定定位，這樣就能穿透所有 overflow */
-    top: var(--dropdown-top, 100%);  /* 由 JavaScript 動態傳入位置 */
-    left: var(--dropdown-left, 0);   /* 由 JavaScript 動態傳入位置 */
-    width: var(--dropdown-width, auto); /* 由 JavaScript 動態傳入寬度 */
-    bottom: auto; /* 確保不會被 bottom 影響 */
-    right: auto;  /* 確保不會被 right 影響 */
-    z-index: 9999; /* 移到最頂層 */
+    position: fixed !important;
+    top: var(--dropdown-top, 100%) !important;
+    left: var(--dropdown-left, 0) !important;
+    width: var(--dropdown-width, auto) !important;
+    bottom: auto !important;
+    right: auto !important;
+    z-index: 9999 !important; /* 確保絕對壓在表格與地圖最上層 */
 }
 
 .filter-input { width: 100%; padding: 8px; border: none; border-bottom: 1px solid #eee; outline: none; }

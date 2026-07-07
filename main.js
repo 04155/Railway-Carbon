@@ -377,6 +377,7 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
 
 function closeAllCombos() {
     document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
+    document.querySelectorAll('.dropdown-box').forEach(el => el.classList.remove('is-fixed'));
 }
 document.addEventListener("click", closeAllCombos);
 
