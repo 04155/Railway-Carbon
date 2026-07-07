@@ -142,6 +142,7 @@ function importCSV(input) {
 }
 // 開啟預覽視窗
 function openImportModal(rows) {
+    console.log("測試：視窗函數有被呼叫到！");
     const previewBody = document.getElementById("importPreviewBody");
     previewBody.innerHTML = ""; 
 
