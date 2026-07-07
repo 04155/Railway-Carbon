@@ -305,33 +305,18 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
     /* 下拉選單與表格在手機版的微調 */
     .table-responsive {
-        padding-bottom: 30px !important;    /* 大幅調小：只要保留一點點下拉選單下緣的緩衝即可 */
-        margin-bottom: 10px !important;     /* 貼近下方的元件 */
-        overflow-x: auto !important;         /* 確保橫向滑動依全速流暢運作 */
-        border-radius: 8px;
+        padding-bottom: 100px !important; /* 留下一點緩衝空間給起終點下拉選單即可 */
+        margin-bottom: 0 !important;
+        overflow-x: auto !important;       /* 確保手機版也絕對支援橫向滾動 */
     }
 
-    /* 💡 修正 2：微調表格內部的格子緊湊度，縮小內邊距(Padding) */
-    .table-responsive th, 
-    .table-responsive td {
-        padding: 6px 4px !important;         /* 上下縮緊，讓手機版每行看起來不那麼厚 */
-        font-size: 14px !important;          /* 字體微調小一點點更精緻 */
-    }
-
-    /* 💡 修正 3：鎖定表格在手機版不需要太寬，這樣滾動起來更流暢 */
-    .table-responsive table {
-        min-width: 580px !important;         /* 適度縮減最低寬度限制 */
-    }
-
-    /* 💡 修正 4：縮小輸入框在手機上的高度 */
-    .num-input {
-        width: 50px !important;
-        padding: 4px 2px !important;
-        text-align: center;
+    .dropdown-box {
+        min-width: 180px !important; 
     }
     
-    .select-trigger {
-        padding: 6px 10px !important;       /* 下拉按鈕也變精簡 */
+    .num-input {
+        width: 60px !important;
+        padding: 8px 5px !important;
     }
 
     /* 手機版專屬浮動總計看板 */
