@@ -331,20 +331,28 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
 
     trigger.addEventListener("click", (e) => {
         e.stopPropagation();
+        
+        // ─── 修正點 1：先抓出點擊當下，這個選單到底是不是開著的 ───
         const isOpen = container.classList.contains("open");
+        
+        // 呼叫全域關閉，這會清除網頁上所有選單的 open 與 is-fixed
         closeAllCombos();
+        
+        // ─── 修正點 2：再次強力確保，全網頁所有的 is-fixed 在這一刻都被拔乾淨 ───
+        document.querySelectorAll(".dropdown-box").forEach(el => el.classList.remove("is-fixed"));
+        
         if (!isOpen) {
             container.classList.add("open");
             
-            // ─── 關鍵修正：點擊打開時，計算並綁定 fixed 的座標 ───
+            // 點擊打開時，計算並綁定 fixed 的座標
             updateDropdownPosition();
             dropdown.classList.add("is-fixed");
             
             renderList("");
             filterInput.value = "";
             setTimeout(() => filterInput.focus(), 50);
-        }else {
-            // 如果原本就是打開的，再次點擊時，確保 container 移除 open
+        } else {
+            // 如果原本就是打開的，再次點擊時，確保自己關閉並移除 is-fixed
             container.classList.remove("open");
             dropdown.classList.remove("is-fixed");
         }
@@ -362,7 +370,7 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
                 trigger.innerText = station;
                 container.classList.remove("open");
                 
-                // ─── 關鍵修正：關閉選單時，移除 fixed 狀態 ───
+                // 關閉選單時，移除 fixed 狀態
                 dropdown.classList.remove("is-fixed");
                 
                 onChangeCallback();
@@ -374,7 +382,7 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
     filterInput.oninput = function() { renderList(this.value.trim()); };
     dropdown.onclick = (ev) => ev.stopPropagation();
 
-    // ─── 關鍵修正：當頁面捲動或縮放時，同步追蹤位置以免選單飄走 ───
+    // 當頁面捲動或縮放時，同步追蹤位置以免選單飄走
     window.addEventListener('scroll', updateDropdownPosition, true);
     window.addEventListener('resize', updateDropdownPosition);
 }
