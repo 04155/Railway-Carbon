@@ -318,43 +318,15 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
     const filterInput = dropdown.querySelector(".filter-input");
     const list = dropdown.querySelector(".station-list");
 
-    // 新增：用來動態更新選單位置的函式
-    function updateDropdownPosition() {
-        if (container.classList.contains("open")) {
-            const rect = trigger.getBoundingClientRect();
-            // 計算輸入框正下方的位置與寬度
-            dropdown.style.setProperty('--dropdown-top', `${rect.bottom}px`);
-            dropdown.style.setProperty('--dropdown-left', `${rect.left}px`);
-            dropdown.style.setProperty('--dropdown-width', `${rect.width}px`);
-        }
-    }
-
     trigger.addEventListener("click", (e) => {
         e.stopPropagation();
-        
-        // ─── 修正點 1：先抓出點擊當下，這個選單到底是不是開著的 ───
         const isOpen = container.classList.contains("open");
-        
-        // 呼叫全域關閉，這會清除網頁上所有選單的 open 與 is-fixed
         closeAllCombos();
-        
-        // ─── 修正點 2：再次強力確保，全網頁所有的 is-fixed 在這一刻都被拔乾淨 ───
-        document.querySelectorAll(".dropdown-box").forEach(el => el.classList.remove("is-fixed"));
-        
         if (!isOpen) {
             container.classList.add("open");
-            
-            // 點擊打開時，計算並綁定 fixed 的座標
-            updateDropdownPosition();
-            dropdown.classList.add("is-fixed");
-            
             renderList("");
             filterInput.value = "";
             setTimeout(() => filterInput.focus(), 50);
-        } else {
-            // 如果原本就是打開的，再次點擊時，確保自己關閉並移除 is-fixed
-            container.classList.remove("open");
-            dropdown.classList.remove("is-fixed");
         }
     });
 
@@ -369,10 +341,6 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
                 ev.stopPropagation();
                 trigger.innerText = station;
                 container.classList.remove("open");
-                
-                // 關閉選單時，移除 fixed 狀態
-                dropdown.classList.remove("is-fixed");
-                
                 onChangeCallback();
             };
             list.appendChild(li);
@@ -381,17 +349,10 @@ function initTableRowSelect(comboId, triggerId, onChangeCallback) {
     
     filterInput.oninput = function() { renderList(this.value.trim()); };
     dropdown.onclick = (ev) => ev.stopPropagation();
-
-    // 當頁面捲動或縮放時，同步追蹤位置以免選單飄走
-    window.addEventListener('scroll', updateDropdownPosition, true);
-    window.addEventListener('resize', updateDropdownPosition);
 }
 
 function closeAllCombos() {
     document.querySelectorAll(".custom-select-container").forEach(c => c.classList.remove("open"));
-    document.querySelectorAll(".dropdown-box").forEach(dropdown => {
-        dropdown.classList.remove("is-fixed");
-    });
 }
 document.addEventListener("click", closeAllCombos);
 

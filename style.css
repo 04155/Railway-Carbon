@@ -1,4 +1,6 @@
-/* style.css - Part 1: Reset and Layout */
+/* =========================================
+   style.css - Part 1: Reset and Layout
+   ========================================= */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -42,7 +44,7 @@ body {
 
 h2 { margin-bottom: 20px; color: #2d3436; }
 
-/* 地圖容器設定 (關鍵) */
+/* 地圖容器設定 */
 #map {
     flex-grow: 1;
     width: 100%;
@@ -63,8 +65,19 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .btn-add { background: #059669; color: white; margin-bottom: 15px; }
 .btn-add:hover { background: #047857; }
 
-/* style.css - Part 2: Table and Custom Select Styles */
-.table-responsive { width: 100%; overflow-x: auto; }
+
+/* =========================================
+   style.css - Part 2: Table and Custom Select Styles
+   ========================================= */
+
+/* ─── 【關鍵修正 1】解除表格容器的縱向裁剪限制 ─── */
+.table-responsive { 
+    width: 100%; 
+    overflow-x: auto !important;     /* 保持橫向滾動，可以滑動看人數或刪除按鈕 */
+    overflow-y: visible !important;  /* 關鍵：縱向改成看得見，讓絕對定位選單穿透底線往下長 */
+    padding-bottom: 220px !important; /* 核心：在表格最底部推開隱形空間，留給下拉選單伸展 */
+    margin-bottom: -220px !important;  /* 補償排版，不影響下方總計區塊的位置 */
+}
 
 .excel-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 .excel-table th, .excel-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
@@ -72,22 +85,28 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 /* 顏色標記圓點 */
 .color-badge { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
 
-/* 下拉選單容器 */
-.custom-select-container { position: relative; cursor: pointer; user-select: none; overflow: visible; }
-.select-trigger { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; min-width: 100px;display: flex; }
-.select-trigger:hover { border-color: #3b82f6; }
+/* 下拉選單外層容器 */
+.custom-select-container { 
+    position: relative; 
+    cursor: pointer; 
+    user-select: none; 
+    overflow: visible !important; /* 確保容器本身不裁切內容 */
+}
+.select-trigger { 
+    padding: 8px; 
+    border: 1px solid #d1d5db; 
+    border-radius: 4px; 
+    background: #fff; 
+    min-width: 100px; 
+    display: flex; 
+}
+.select-trigger:hover { 
+    border-color: #3b82f6; 
+}
 
-/* =========================================
-   【選單美化版樣式】
-   修正佈局歪掉與變直書的問題，同時保持浮空
-   ========================================= */
-
-/* 1. 下拉選單核心容器：修正佈局方向，預設隱藏 */
+/* ─── 【關鍵修正 2】下拉選單本體：預設隱藏，維持絕對定位，恢復漂亮外觀 ─── */
 .dropdown-box { 
-    /* 暴力保險：預設隱藏 */
-    display: none !important; 
-    
-    /* 基本定位與樣式 (你的原檔) */
+    display: none; 
     position: absolute; 
     top: 100%; 
     left: 0; 
@@ -99,54 +118,49 @@ h2 { margin-bottom: 20px; color: #2d3436; }
     box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
     box-sizing: border-box;
 
-    /* ─── 【重要修正 1】佈局設定 ─── */
-    display: flex !important; /* 這個雖然會被 none !important 壓過，但開起來時要用 flex */
-    flex-direction: column !important; /* 我們要搜尋框和清單由上而下，但不能歪掉 */
-    padding: 0 !important; /* 把 padding 交給裡面的元件，選單外層保持乾淨 */
+    /* 修正佈局：確保寬度足夠且元件垂直排列 */
+    flex-direction: column; 
+    padding: 8px; /* 恢復原本的內邊距，選單才不會變窄變醜 */
+    min-width: 150px; /* 給予一個最小寬度，防止選單寬度被輸入框限死而變醜擠壓 */
 }
 
-/* 2. 只有點開時才准顯示 */
+/* 只有點開時，才切換為 flex 排版顯示出來 */
 .custom-select-container.open .dropdown-box { 
-    display: flex !important; /* 蓋過隱藏狀態 */
+    display: flex; 
 }
 
-/* 3. 浮空定位樣式 (保持你的原檔，加上 padding 修正) */
-.dropdown-box.is-fixed {
-    position: fixed !important;
-    top: var(--dropdown-top, 100%) !important;
-    left: var(--dropdown-left, 0) !important;
-    width: var(--dropdown-width, auto) !important;
-    bottom: auto !important;
-    right: auto !important;
-    z-index: 9999 !important; 
-    
-    /* ─── 【重要修正 2】加上內部 padding ─── */
-    padding: 8px !important; /* 讓內容不要黏著邊框 */
-}
-
-/* ─── 【重要修正 3】美化內部的搜尋框 (filter-input) 與清單 (station-list) ─── */
+/* ─── 美化內部的搜尋框 (filter-input) 與清單 (station-list) ─── */
 .dropdown-box .filter-input {
-    width: 100% !important; /* 確保搜尋框撐滿 */
+    width: 100% !important; 
     box-sizing: border-box !important;
-    margin-bottom: 8px !important; /* 與清單拉開間距 */
+    margin-bottom: 8px !important; 
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    outline: none;
+}
+.dropdown-box .filter-input:focus {
+    border-color: #3b82f6;
 }
 
 .dropdown-box .station-list {
-    list-style: none !important; /* 拔掉清單小圓點 */
+    list-style: none !important; 
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    display: block !important; /* 清單本身就是直排 */
-    max-height: 200px !important; /* 限制高度，超出則滾動 */
+    display: block !important; 
+    max-height: 180px !important; 
     overflow-y: auto !important;
 }
 
-/* ─── 【重要修正 4】美化清單項目 (station-item) ─── */
+/* ─── 美化清單項目 (station-item) ─── */
 .dropdown-box .station-item {
     padding: 8px 12px !important;
     cursor: pointer !important;
-    text-align: left !important; /* 確保文字靠左 */
-    white-space: nowrap !important; /* 確保文字不換行 */
+    text-align: left !important; 
+    white-space: nowrap !important; /* 確保站名文字不會自己斷行變直書 */
+    background: transparent;
+    font-weight: normal;
 }
 
 /* 選取與滑過樣式 */
@@ -156,17 +170,12 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 .dropdown-box .station-item.selected {
     background-color: #3b82f6 !important;
     color: white !important;
+    font-weight: bold !important;
 }
-
-.filter-input { width: 100%; padding: 8px; border: none; border-bottom: 1px solid #eee; outline: none; }
-.station-list { list-style: none; max-height: 200px; overflow-y: auto; }
-.station-item { padding: 8px; cursor: pointer; }
-.station-item:hover { background: #eff6ff; }
-.station-item.selected { background: #dbeafe; font-weight: bold; }
 
 /* 數字輸入框與刪除按鈕 */
 .num-input { width: 50px; padding: 5px; border: 1px solid #d1d5db; border-radius: 4px; }
-.btn-del { background: #ef4444; color: white; padding: 5px 10px; }
+.btn-del { background: #ef4444; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer;}
 .btn-del:hover { background: #dc2626; }
 
 /* 總結區塊 */
