@@ -14,13 +14,14 @@
 <div class="main-wrapper">
     <div class="left-panel">
         <h2>台鐵碳排批次規劃表</h2>
-        <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
-        <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
-        
-        <!-- 新增：CSV 匯入按鈕與隱藏的 input -->
-        <button class="btn-action btn-calc" style="background: #64748b;" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV,xlsx,xls</button>
-        <input type="file" id="csvFileInput" accept=".csv,.xlsx, .xls" style="display: none;" onchange="importCSV(this)">
-        <button onclick="exportToExcel()" style="background-color: #2e7d32; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">📤 匯出結果 Excel</button>
+        <div class="action-btn-group">
+            <button class="btn-action btn-add" onclick="addNewRow()">＋ 新增一筆行程</button>
+            <button class="btn-action btn-calc" onclick="calculateAllRoutes()">🔄 重新計算</button>
+            <button class="btn-action btn-calc" style="background: #64748b;" onclick="document.getElementById('csvFileInput').click()">📥 匯入 CSV,xlsx,xls</button>
+            <input type=\"file\" id=\"csvFileInput\" accept=\".csv,.xlsx,.xls\" style=\"display: none;\" onchange=\"importCSV(this)\">
+            <button onclick="exportToExcel()" style="background-color: #2e7d32; color: white;">📤 匯出 Excel</button>
+        </div>
+
         <div class="table-responsive">
             <table class="excel-table">
                 <thead>
