@@ -74,28 +74,32 @@ h2 { margin-bottom: 20px; color: #2d3436; }
 
 /* 下拉選單容器 */
 .custom-select-container { position: relative; cursor: pointer; user-select: none; overflow: visible; }
-.select-trigger { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; min-width: 100px;display: flex; }
+.select-trigger { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; min-width: 100px; display: flex; }
 .select-trigger:hover { border-color: #3b82f6; }
 
 .dropdown-box { 
     position: absolute; 
-    top: 100%; 
+    
+    /* ─── 關鍵修改：從下方改為從上方彈出 ─── */
+    bottom: 100%;       /* 讓選單對齊輸入框的頂部，往上延伸 */
+    margin-bottom: 4px; /* 與輸入框保持一點點微小間距（可不加） */
+    /* top: 100%; */    /* 把原本的 top 註解或刪除 */
+    
     left: 0; 
     right: 0; 
     background: white; 
     border: 1px solid #d1d5db; 
-    border-radius: 0 0 6px 6px; 
     
-    /* 關鍵修正：將 z-index 提高到 2000 以上，確保壓過地圖與周邊容器 */
+    /* 調整圓角：改成上方圓角，下方直角，視覺上更合理 */
+    border-radius: 6px 6px 0 0; 
+    
     z-index: 2500; 
-    
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* 加深陰影，讓最上層的視覺更明顯 */
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.15); /* 陰影方向也改成往上飄 */
     display: flex; 
     padding: 8px; 
     box-sizing: border-box;
 }
 .custom-select-container.open .dropdown-box { display: block; }
-
 .filter-input { width: 100%; padding: 8px; border: none; border-bottom: 1px solid #eee; outline: none; }
 .station-list { list-style: none; max-height: 200px; overflow-y: auto; }
 .station-item { padding: 8px; cursor: pointer; }
