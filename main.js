@@ -340,78 +340,88 @@ function calculateAllRoutes() {
     const allRouteLatLngs = []; 
 
     rows.forEach(row => {
-        const rowId = row.id;
-        const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
-        const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
-        const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
-        const colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length];
-        index++;
+    const rowId = row.id;
+    const startName = document.getElementById(`${rowId}_startTrigger`).innerText;
+    const endName = document.getElementById(`${rowId}_endTrigger`).innerText;
+    const passengers = parseInt(document.getElementById(`${rowId}_passengers`).value) || 1;
+    
+    // 💡 關鍵修正：拋棄 index % ROUTE_COLORS.length 這種會錯位的抽法
+    // 直接去撈左側網頁表格中，那一行圓點 (.color-badge) 實際顯示的背景顏色
+    let colorHex = ROUTE_COLORS[index % ROUTE_COLORS.length]; // 預設留作備份底色
+    const badgeEl = row.querySelector('.color-badge');
+    if (badgeEl && badgeEl.style.backgroundColor) {
+        colorHex = badgeEl.style.backgroundColor;
+    }
+    index++; // 保持 index 自增以防其他地方有用到
+    
+    if (startName === endName) return; 
+    
+    const routeResult = findShortestPath(startName, endName);
+    
+    if (routeResult && routeResult.distance > 0) {
+        const CARBON_FACTOR = 0.048;
+        const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
         
-        if (startName === endName) return; 
+        document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
+        document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
         
-        const routeResult = findShortestPath(startName, endName);
+        rowDataStore[rowId] = { 
+            dist: routeResult.distance, 
+            carbon: trainCarbon, 
+            path: routeResult.path.join(' → '), 
+            nodes: routeResult.path 
+        };
         
-        if (routeResult && routeResult.distance > 0) {
-            const CARBON_FACTOR = 0.048;
-            const trainCarbon = routeResult.distance * CARBON_FACTOR * passengers;
-            
-            document.getElementById(`${rowId}_distanceText`).innerText = routeResult.distance.toFixed(1);
-            document.getElementById(`${rowId}_carbonText`).innerText = trainCarbon.toFixed(3);
-            
-            rowDataStore[rowId] = { 
-                dist: routeResult.distance, 
-                carbon: trainCarbon, 
-                path: routeResult.path.join(' → '), 
-                nodes: routeResult.path 
-            };
-            
-            totalDist += routeResult.distance; 
-            totalCarbon += trainCarbon; 
-            validCount++;
-            
-            mapLayers[rowId] = [];
-            const currentRouteLatLngs = [];
-            
-            routeResult.path.forEach((node, nIdx) => {
-                const pos = getStationLatLng(node);
-                if (pos) {
-                    currentRouteLatLngs.push(pos);
-                    allRouteLatLngs.push(pos);
+        totalDist += routeResult.distance; 
+        totalCarbon += trainCarbon; 
+        validCount++;
+        
+        mapLayers[rowId] = [];
+        const currentRouteLatLngs = [];
+        
+        routeResult.path.forEach((node, nIdx) => {
+            const pos = getStationLatLng(node);
+            if (pos) {
+                currentRouteLatLngs.push(pos);
+                allRouteLatLngs.push(pos);
+                
+                if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
+                    const isStart = (nIdx === 0);
+                    // 💡 這裡的 fillColor 和 color 也會自動套用正確的顏色！
+                    const marker = L.circleMarker(pos, { 
+                        radius: isStart ? 6 : 5, 
+                        fillColor: isStart ? '#ffffff' : colorHex, 
+                        color: colorHex, 
+                        weight: 2, 
+                        fillOpacity: 1.0 
+                    }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
                     
-                    if (nIdx === 0 || nIdx === routeResult.path.length - 1) {
-                        const isStart = (nIdx === 0);
-                        const marker = L.circleMarker(pos, { 
-                            radius: isStart ? 6 : 5, 
-                            fillColor: isStart ? '#ffffff' : colorHex, 
-                            color: colorHex, 
-                            weight: 2, 
-                            fillOpacity: 1.0 
-                        }).addTo(mapInstance).bindPopup(`<b>行程 ${validCount} [${isStart ? '起點' : '終點'}]</b><br>車站：${node}`);
-                        
-                        mapLayers[rowId].push(marker);
-                    }
+                    mapLayers[rowId].push(marker);
                 }
-            });
-
-            if (currentRouteLatLngs.length >= 2) {
-                const polylineBack = L.polyline(currentRouteLatLngs, { 
-                    color: colorHex, 
-                    weight: 5, 
-                    opacity: 0.7, 
-                    customType: 'back' 
-                }).addTo(mapInstance);
-
-                const polylineFront = L.polyline(currentRouteLatLngs, { 
-                    color: '#ffffff', 
-                    weight: 2, 
-                    dashArray: '5, 8', 
-                    opacity: 0.9, 
-                    customType: 'front' 
-                }).addTo(mapInstance);
-
-                mapLayers[rowId].push(polylineBack, polylineFront);
             }
+        });
+
+        if (currentRouteLatLngs.length >= 2) {
+            // 💡 這裡的 color: colorHex 就會是百分之百跟圖軸相同的顏色了！
+            const polylineBack = L.polyline(currentRouteLatLngs, { 
+                color: colorHex, 
+                weight: 5, 
+                opacity: 0.7, 
+                customType: 'back' 
+            }).addTo(mapInstance);
+
+            const polylineFront = L.polyline(currentRouteLatLngs, { 
+                color: '#ffffff', 
+                weight: 2, 
+                dashArray: '5, 8', 
+                opacity: 0.9, 
+                customType: 'front' 
+            }).addTo(mapInstance);
+
+            mapLayers[rowId].push(polylineBack, polylineFront);
         }
+    }
+});
     });
 
     const summaryBox = document.getElementById("summaryResult");
